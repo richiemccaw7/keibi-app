@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>シフト入力</title>
+<style>
+  :root {
+    color-scheme: dark;
+    /* Enforcer のホームページに合わせた、黒が基調の色 */
+    --bg: #0B0B10; --card: #17171F; --ink: #F2F2F5; --sub: #9A9AA8; --line: #2C2C38; --input: #101017;
+    --brand: linear-gradient(100deg, #090738 0%, #211718 100%);
+    --blue: #2F86E0; --blue-bg: #13253B; --sat: #6CB2FF;
+    --green: #3DD68C; --green-bg: #0F2E20; --yellow: #F2C14E; --yellow-bg: #332A10;
+    --red: #FF6B6B; --red-bg: #3A1619; --gray-bg: #24242E;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  input, textarea, select { background: var(--input); color: var(--ink); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--brand); border-bottom: 1px solid var(--line); padding: 10px 12px 8px; }
+  .mnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .mnav button { height: 44px; padding: 0 12px; border-radius: 12px; background: rgba(255,255,255,.1); font-size: 15px; font-weight: 700; }
+  .mnav b { font-size: 20px; }
+  .strip { position: relative; display: flex; gap: 6px; overflow-x: auto; margin: 8px -12px 0; padding: 0 12px 2px; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .strip button { position: relative; flex: 0 0 46px; height: 62px; border-radius: 12px; background: rgba(255,255,255,.08); font-size: 12px; line-height: 1.2; scroll-snap-align: center; }
+  .strip button b { display: block; font-size: 18px; }
+  .strip button.today { box-shadow: inset 0 0 0 2px var(--blue); }
+  .strip button.on { background: var(--blue); color: #fff; }
+  .strip button i { position: absolute; left: 50%; bottom: 5px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; }
+  .strip button i.lack { background: var(--red); }
+  .strip button i.full { background: var(--green); }
+  .strip button.on i { box-shadow: 0 0 0 2px #fff; }
+  .sat { color: var(--sat); } .sun { color: var(--red); }
+  .strip button.on .sat, .strip button.on .sun { color: #fff; }
+  .legend { margin-right: auto; display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--sub); }
+  .legend span::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; vertical-align: 1px; }
+  .legend .l1::before { background: var(--red); } .legend .l2::before { background: var(--green); }
+  .steps { display: flex; gap: 6px; padding: 8px 12px 0; background: var(--card); }
+  .steps div { flex: 1; text-align: center; font-size: 13px; font-weight: 700; color: var(--sub); padding: 6px 0 8px; border-top: 4px solid var(--line); }
+  .steps div.on { color: var(--blue); border-color: var(--blue); }
+  .steps div.done { color: var(--green); border-color: var(--green); }
+  .sum { background: var(--blue-bg); color: var(--blue); border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 700; white-space: pre-line; }
+  .foot .back { height: 58px; padding: 0 18px; border-radius: 16px; background: var(--gray-bg); font-weight: 700; }
+  .foot .save:disabled { opacity: .4; }
+  .tile.on { outline: 4px solid var(--ink); outline-offset: -4px; }
+  .guard { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 8px; background: #3A2A10; color: #F2C14E; margin-left: 6px; vertical-align: 2px; }
+  .qrow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .qrow:first-child { border-top: 0; }
+  .qrow .who { flex: 1; min-width: 10em; }
+  .qrow .name { font-weight: 700; }
+  .qrow .sub { font-size: 13px; color: var(--sub); }
+  .qrow input[type=month] { height: 40px; font-size: 15px; border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; }
+  .qpick { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
+  .qpick .who { flex: 1; }
+  .qpick .name { font-weight: 700; font-size: 17px; }
+  .qpick .sub { font-size: 13px; color: var(--sub); }
+  .qpick .amt { font-weight: 700; color: var(--blue); white-space: nowrap; }
+  .qpick.has { opacity: .5; }
+  .orow { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; }
+  .orow .n { width: 2em; color: var(--sub); font-size: 14px; }
+  .orow .name { flex: 1; font-weight: 700; }
+  .orow button { width: 44px; height: 40px; border-radius: 10px; background: var(--gray-bg); font-size: 18px; }
+  main { padding: 12px 12px 110px; }
+  .group { margin: 14px 0 6px; font-size: 14px; font-weight: 700; color: var(--sub); }
+  .card { display: flex; width: 100%; text-align: left; background: var(--card); border-radius: 14px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.06); min-height: 72px; }
+  .card .bar { width: 10px; flex: none; }
+  .card .body { flex: 1; padding: 10px 12px; min-width: 0; }
+  .card .title { font-weight: 700; font-size: 18px; }
+  .card .title small { font-weight: 400; color: var(--sub); font-size: 13px; margin-left: 6px; }
+  .card .time { color: var(--sub); font-size: 15px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .chip { background: var(--gray-bg); border-radius: 999px; padding: 2px 10px; font-size: 14px; }
+  .count { flex: none; align-self: center; margin-right: 12px; font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 999px; background: var(--green-bg); color: var(--green); }
+  .count.short { background: var(--red-bg); color: var(--red); }
+  .empty { text-align: center; color: var(--sub); padding: 40px 12px; }
+  .fab { position: fixed; left: 12px; right: 12px; bottom: 16px; z-index: 4; height: 60px; border-radius: 16px; background: var(--blue); color: #fff; font-size: 19px; font-weight: 700; box-shadow: 0 4px 12px rgba(31,95,191,.35); }
+  .sheet { position: fixed; inset: 0; z-index: 10; background: var(--bg); display: none; flex-direction: column; }
+  .sheet.open { display: flex; }
+  .sheet-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--brand); border-bottom: 1px solid var(--line); }
+  .sheet-head button { height: 44px; padding: 0 14px; border-radius: 12px; background: rgba(255,255,255,.1); }
+  .sheet-head .t { flex: 1; font-weight: 700; font-size: 19px; }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 12px 12px 110px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile { border: 1px solid rgba(255,255,255,.12); min-height: 64px; border-radius: 14px; padding: 8px 10px; text-align: left; font-weight: 700; font-size: 17px; }
+  .tile small { display: block; font-weight: 400; font-size: 12px; opacity: .9; }
+  .box { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+  .box h3 { margin: 0 0 8px; font-size: 15px; color: var(--sub); }
+  .times { display: flex; align-items: center; gap: 8px; }
+  .times input { flex: 1; height: 50px; font-size: 20px; border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; background: var(--input); color: var(--ink); }
+  .hint { font-size: 13px; color: var(--sub); margin-top: 6px; }
+  .link { color: var(--blue); font-size: 15px; padding: 6px 0; }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button { width: 52px; height: 52px; border-radius: 14px; background: var(--gray-bg); font-size: 24px; }
+  .stepper b { font-size: 24px; min-width: 3em; text-align: center; }
+  .memo { width: 100%; height: 48px; font-size: 17px; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+  .person { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 2px solid transparent; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; min-height: 60px; }
+  .person .ck { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; color: #fff; font-weight: 700; }
+  .person.sel { border-color: var(--blue); background: var(--blue-bg); }
+  .person.sel .ck { background: var(--blue); border-color: var(--blue); }
+  .person.lock { opacity: .75; }
+  .person .who { flex: 1; min-width: 0; }
+  .person .name { font-weight: 700; font-size: 18px; }
+  .person .sub { font-size: 13px; color: var(--sub); }
+  .person .own { color: var(--red); font-weight: 700; }
+  .ptime { flex: none; height: 40px; padding: 0 10px; border-radius: 10px; background: var(--input); border: 1px solid var(--line); font-size: 14px; font-weight: 700; color: var(--blue); }
+  .badge { flex: none; font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 8px; }
+  .badge.ok { background: var(--green-bg); color: var(--green); }
+  .badge.part { background: var(--yellow-bg); color: var(--yellow); }
+  .badge.none { background: var(--gray-bg); color: var(--sub); }
+  .badge.no { background: var(--red-bg); color: var(--red); }
+  .badge.temp { background: var(--blue-bg); color: var(--blue); }
+  .foot { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; padding: 12px; background: var(--card); border-top: 1px solid var(--line); }
+  .foot .save { flex: 1; height: 58px; border-radius: 16px; background: var(--blue); color: #fff; font-size: 19px; font-weight: 700; }
+  .foot .del { height: 58px; padding: 0 16px; border-radius: 16px; background: var(--red-bg); color: var(--red); font-weight: 700; }
+  .search { width: 100%; height: 50px; font-size: 17px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; margin-bottom: 4px; background: var(--input); color: var(--ink); }
+  .newsite { width: 100%; height: 58px; border-radius: 14px; border: 2px dashed var(--blue); color: var(--blue); font-weight: 700; font-size: 17px; background: transparent; margin: 4px 0 8px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { min-height: 46px; padding: 0 14px; border-radius: 12px; background: var(--gray-bg); font-weight: 700; }
+  .opt.on { background: var(--blue); color: #fff; }
+  .swatch { width: 46px; height: 46px; border-radius: 12px; border: 3px solid transparent; }
+  .swatch.on { border-color: var(--ink); }
+  .tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+  .tools button { height: 34px; padding: 0 10px; border-radius: 10px; background: rgba(255,255,255,.1); font-size: 13px; font-weight: 700; color: var(--blue); white-space: nowrap; }
+  .rep { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .rep:first-child { border-top: 0; }
+  .rep b { width: 5.5em; flex: none; }
+  .rep span { flex: 1; min-width: 6em; }
+  .rep input { height: 42px; font-size: 17px; border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; }
+  .mini { height: 42px; padding: 0 12px; border-radius: 10px; background: var(--blue); color: #fff; font-weight: 700; font-size: 14px; }
+  .mini.red { background: var(--red-bg); color: var(--red); }
+  .more { width: 100%; height: 52px; border-radius: 14px; background: var(--red-bg); color: var(--red); font-weight: 700; margin: 4px 0 8px; }
+  .more.gray { background: var(--gray-bg); color: var(--sub); }
+  .more.blue { background: var(--blue-bg); color: var(--blue); }
+  .readonly { background: var(--yellow-bg); color: var(--yellow); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal .wd { text-align: center; font-size: 12px; color: var(--sub); padding: 2px 0; }
+  .cal button { height: 48px; border-radius: 10px; background: var(--gray-bg); font-weight: 700; font-size: 16px; line-height: 1.1; }
+  .cal button small { display: block; font-size: 10px; font-weight: 400; }
+  .cal button.on { background: var(--blue); color: #fff; }
+  .cal button.done { background: transparent; color: var(--sub); border: 1px dashed var(--line); }
+  .cal button.has small { color: var(--sub); }
+  .cal button.on.has small { color: #fff; }
+  .cal button.sun { color: var(--red); } .cal button.sat { color: var(--sat); }
+  .cal button.on.sun, .cal button.on.sat { color: #fff; }
+  .monthnav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .monthnav b { font-size: 18px; }
+  .monthnav button { width: 44px; height: 40px; border-radius: 10px; background: var(--gray-bg); font-size: 20px; }
+  .cal button.del { background: var(--red); color: #fff; }
+  .foot .save.danger { background: var(--red); }
+  .site-row { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+  .site-row .dot { width: 14px; height: 40px; border-radius: 6px; flex: none; }
+  .site-row .who { flex: 1; min-width: 0; }
+  .site-row .name { font-weight: 700; font-size: 17px; }
+  .site-row .sub { font-size: 13px; color: var(--sub); }
+  .srow { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: var(--card); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; min-height: 56px; }
+  .srow .who { flex: 1; min-width: 0; }
+  .srow .name { font-weight: 700; font-size: 17px; }
+  .srow .sub { font-size: 13px; color: var(--sub); }
+  .srow.wait { border: 2px solid #F08C00; }
+  .dlg { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; padding: 20px; }
+  .dlg.open { display: flex; }
+  .dlg-box { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px; width: 100%; max-width: 360px; }
+  .dlg-msg { font-size: 17px; white-space: pre-line; margin-bottom: 16px; }
+  .dlg-btns { display: flex; gap: 8px; }
+  .dlg-btns button { flex: 1; min-height: 52px; border-radius: 14px; font-weight: 700; font-size: 16px; }
+  #dlgNo { background: var(--gray-bg); }
+  #dlgYes { background: var(--blue); color: #fff; }
+  #dlgYes.danger { background: var(--red); }
+  #toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: #2A2A36; border: 1px solid var(--line); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 15px; z-index: 30; display: none; max-width: 90%; white-space: pre-line; }
+  #loading { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.6); display: none; place-items: center; font-weight: 700; color: var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <div class="mnav">
+    <button onclick="moveMonth(-1)">‹ 前の月</button>
+    <b id="monthLabel"></b>
+    <button onclick="moveMonth(1)">次の月 ›</button>
+  </div>
+  <div class="strip" id="strip"></div>
+  <div class="tools" id="tools"></div>
+</header>
+
+<main id="list"></main>
+<button class="fab" id="fab" onclick="openAdd()" style="display:none">＋ 現場を追加（枠を作る）</button>
+
+<div class="sheet" id="add">
+  <div class="sheet-head"><button onclick="closeSheet('add')">‹ 戻る</button><div class="t" id="adTitle">現場を追加</div></div>
+  <div class="steps" id="adSteps"></div>
+  <div class="sheet-body">
+    <div id="ad1">
+      <input class="search" id="adSearch" placeholder="現場をさがす（略称・正式名）" oninput="renderAdList()">
+      <div id="adList"></div>
+      <button class="newsite" id="adNewBtn" onclick="startNewSite()">＋ 新しい現場を作る</button>
+      <div id="adNew" style="display:none">
+        <div class="box"><h3>身辺警護の現場ですか？（最初に選ぶ）</h3><div class="opts" id="nsGuard"></div><div class="hint">身辺の勤務時間と回数は、別に集計します。あとから「現場の管理」の「直す」で変えられます</div></div>
+        <div class="box"><h3>略称（必ず入れる・8文字まで）</h3><input class="memo" id="nsCode" maxlength="8" placeholder="例：羽田入国" oninput="A.nw.code=this.value">
+          <div class="hint">シフト表・見る用の表・この画面に出る短い名前です</div></div>
+        <div class="box"><h3>正式名（なくてもOK）</h3><input class="memo" id="nsFull" placeholder="例：羽田空港 第3ターミナル 入国" oninput="A.nw.full=this.value">
+          <div class="hint">前日の連絡など、LINEのお知らせに出る名前です。空なら略称を使います</div></div>
+        <div class="box"><h3>受託元</h3><div class="opts" id="nsPrime"></div></div>
+        <div class="box" id="nsClientBox"><h3>クライアント（Enfのとき）</h3><div class="opts" id="nsClient"></div></div>
+        <div class="box"><h3>種類</h3><div class="opts" id="nsKind"></div></div>
+        <div class="box" id="nsTimeBox">
+          <h3>所定の時間（平日）</h3>
+          <div class="times"><input type="time" id="nsStart" onchange="A.nw.start=this.value"> 〜 <input type="time" id="nsEnd" onchange="A.nw.end=this.value"></div>
+          <h3 style="margin-top:14px">所定の時間（土日祝）</h3>
+          <div class="times"><input type="time" id="nsHStart" onchange="A.nw.hStart=this.value"> 〜 <input type="time" id="nsHEnd" onchange="A.nw.hEnd=this.value"></div>
+          <div class="hint">土日祝が平日と同じなら空欄のままでOK</div>
+        </div>
+        <div class="box"><h3>色</h3><div class="opts" id="nsColor"></div></div>
+        <button class="newsite" style="border-style:solid;border-color:var(--line);color:var(--sub)" onclick="A.isNew=false;renderAdd()">← 今ある現場から選ぶ</button>
+      </div>
+    </div>
+    <div id="ad2">
+      <div class="box" id="adStdBox"><h3>時間</h3><div class="opts" id="adStd"></div><div class="hint" id="adStdHint"></div></div>
+      <div class="box" id="adTimeBox">
+        <h3 id="adTimeTitle">時間</h3>
+        <div class="times"><input type="time" id="adStart"> 〜 <input type="time" id="adEnd"></div>
+        <div class="hint" id="adTimeHint"></div>
+      </div>
+      <div class="box"><h3>必要人数（1日あたり）</h3><div class="stepper"><button onclick="adNeed(-1)">−</button><b id="adNeedV"></b><button onclick="adNeed(1)">＋</button></div></div>
+      <div class="box"><h3>応援メモ（なくてもOK・社長と社員だけに表示）</h3><input class="memo" id="adMemo" placeholder="例：ESRR 1人"></div>
+    </div>
+    <div id="ad3">
+      <div class="box">
+        <div class="monthnav"><button onclick="adMonth(-1)">‹</button><b id="adMonthV"></b><button onclick="adMonth(1)">›</button></div>
+        <div class="opts" style="margin-bottom:8px">
+          <button class="opt" onclick="adPick('weekday')">平日</button>
+          <button class="opt" onclick="adPick('off')">土日祝</button>
+          <button class="opt" onclick="adPick('all')">すべて選ぶ</button>
+          <button class="opt" onclick="adPick('none')">選択を解除</button>
+        </div>
+        <div class="cal" id="adCal"></div>
+        <div class="hint">「済」＝この現場の枠がもうある日です。「平日」などのボタンでは選びません（タップすれば、別の時間帯としてもう1つ作れます）。月をまたいで選べます。</div>
+      </div>
+      <div class="sum" id="adSum"></div>
+    </div>
+  </div>
+  <div class="foot"><button class="back" id="adBack" onclick="adBackStep()">もどる</button><button class="save" id="adGo" onclick="adNext()"></button></div>
+</div>
+
+<div class="sheet" id="editor">
+  <div class="sheet-head"><button onclick="closeSheet('editor')">‹ 戻る</button><div class="t" id="edTitle"></div></div>
+  <div class="sheet-body">
+    <div class="readonly" id="edReadonly">シフトは見るだけです。人の右の「報告」から、報告の代理入力と取り消しができます。</div>
+    <div id="edEdit">
+    <div class="box">
+      <h3>時間</h3>
+      <div class="times"><input type="time" id="edStart"> 〜 <input type="time" id="edEnd"></div>
+      <button class="link" onclick="clearTime()">時間を未定にする</button>
+      <div class="hint">夜勤もそのまま入れてください（例：17:00〜8:00）</div>
+    </div>
+    <div class="box">
+      <h3>必要人数</h3>
+      <div class="stepper"><button onclick="stepNeed(-1)">−</button><b id="edNeed"></b><button onclick="stepNeed(1)">＋</button></div>
+    </div>
+    <div class="box">
+      <h3>応援メモ（社長・社員だけに表示）</h3>
+      <input class="memo" id="edMemo" placeholder="例：ESRR 1人">
+    </div>
+    </div>
+    <h3 style="font-size:15px;color:var(--sub);margin:4px 2px 8px" id="edPeopleTitle">人をタップして選ぶ</h3>
+    <div id="edPeople"></div>
+  </div>
+  <div class="foot" id="edFoot">
+    <button class="del" id="edDel" onclick="removeFrame()">削除</button>
+    <button class="save" id="edSave" onclick="save()"></button>
+  </div>
+</div>
+
+<div class="sheet" id="ptime">
+  <div class="sheet-head"><button onclick="closeSheet('ptime')">‹ 戻る</button><div class="t" id="ptTitle"></div></div>
+  <div class="sheet-body">
+    <div class="box" id="ptTimeBox">
+      <h3>この人だけの時間（早退・残業など）</h3>
+      <div class="times"><input type="time" id="ptStart"> 〜 <input type="time" id="ptEnd"></div>
+      <div class="hint" id="ptHint"></div>
+      <button class="link" id="ptReset" onclick="savePersonTime(true)">現場の時間に戻す</button>
+      <div style="margin-top:8px"><button class="mini" onclick="savePersonTime(false)">この人の時間を保存</button></div>
+    </div>
+    <div class="box">
+      <h3>報告（押し間違い・押し忘れ）</h3>
+      <div id="ptReports"></div>
+      <div class="hint">「代わりに入れる」は、入れた時刻で記録します（記録には「代理」と付きます）。</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="bulk">
+  <div class="sheet-head"><button onclick="closeSheet('bulk')">‹ 戻る</button><div class="t" id="bkTitle"></div></div>
+  <div class="sheet-body">
+    <div class="box">
+      <h3>枠を消す日（タップで選ぶ）</h3>
+      <div class="monthnav"><button onclick="bulkMonth(-1)">‹</button><b id="bkMonth"></b><button onclick="bulkMonth(1)">›</button></div>
+      <div class="opts" style="margin-bottom:8px">
+        <button class="opt" onclick="bulkPick('weekday')">平日</button>
+        <button class="opt" onclick="bulkPick('off')">土日祝</button>
+        <button class="opt" onclick="bulkPick('all')">すべて選ぶ</button>
+        <button class="opt" onclick="bulkPick('none')">選択を解除</button>
+      </div>
+      <div class="cal" id="bkCal"></div>
+      <div class="hint">選べるのは、この現場の枠がある日だけです。報告済みの人がいる枠は消さずに残します。</div>
+    </div>
+  </div>
+  <div class="foot"><button class="save danger" id="bkSave" onclick="bulkSave()"></button></div>
+</div>
+
+<div class="sheet" id="siteedit">
+  <div class="sheet-head"><button onclick="closeSheet('siteedit')">‹ 戻る</button><div class="t" id="sdTitle"></div></div>
+  <div class="sheet-body">
+    <div class="box"><h3>身辺警護</h3><div class="opts" id="sdGuard"></div><div class="hint">変えると、これまでの勤務時間の集計（身辺かどうか）も作り直します</div></div>
+    <div class="box"><h3>略称（8文字まで）</h3><input class="memo" id="sdCode" maxlength="8"><div class="hint">変えると、これまでのシフトの現場名もそろいます</div></div>
+    <div class="box"><h3>正式名（LINEのお知らせに出る名前）</h3><input class="memo" id="sdFull"></div>
+    <div class="box" id="sdTimeBox">
+      <h3>所定の時間（平日）</h3>
+      <div class="times"><input type="time" id="sdStart"> 〜 <input type="time" id="sdEnd"></div>
+      <h3 style="margin-top:14px">所定の時間（土日祝）</h3>
+      <div class="times"><input type="time" id="sdHStart"> 〜 <input type="time" id="sdHEnd"></div>
+      <div class="hint">変えた時間は、これから作る枠から使います（もう作ってある枠の時間は変わりません）</div>
+    </div>
+    <div class="box"><h3>色</h3><div class="opts" id="sdColor"></div></div>
+  </div>
+  <div class="foot"><button class="save" onclick="saveSite()">保存</button></div>
+</div>
+
+<div class="sheet" id="sitesheet">
+  <div class="sheet-head"><button onclick="closeSheet('sitesheet')">‹ 戻る</button><div class="t">現場の管理</div></div>
+  <div class="sheet-body">
+    <div class="hint" style="margin-bottom:10px">「枠を消す」は、日にちを選んでその現場の枠をまとめて消します。「削除」した現場は「現場を追加」に出なくなります（これまでのシフトと勤務時間は残ります）。</div>
+    <div id="siteList"></div>
+  </div>
+</div>
+
+<div class="sheet" id="staffs">
+  <div class="sheet-head"><button onclick="closeSheet('staffs')">‹ 戻る</button><div class="t">人の管理</div><button onclick="openOrder()">並べかえ</button></div>
+  <div class="sheet-body" id="staffList"></div>
+</div>
+
+<div class="sheet" id="order">
+  <div class="sheet-head"><button onclick="closeSheet('order')">‹ 戻る</button><div class="t">名簿の並べかえ</div></div>
+  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">見る用の表・勤務時間・資格手当の名簿が、この順になります。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
+  <div class="foot"><button class="save" onclick="saveOrder()">この順で保存</button></div>
+</div>
+
+<div class="sheet" id="qualpick">
+  <div class="sheet-head"><button onclick="qualBack()">‹ 戻る</button><div class="t" id="qpTitle">資格を追加</div></div>
+  <div class="sheet-body"><div class="steps" id="qpSteps" style="background:transparent;padding:0 0 10px"></div><div id="qpList"></div></div>
+</div>
+
+<div class="sheet" id="staffEdit">
+  <div class="sheet-head"><button onclick="closeSheet('staffEdit')">‹ 戻る</button><div class="t" id="seTitle"></div></div>
+  <div class="sheet-body">
+    <div class="box"><h3>氏名</h3><input class="memo" id="seName" placeholder="例：山田 太郎"></div>
+    <div class="box"><h3>呼び名（シフト表に出る名前）</h3><input class="memo" id="seNick" placeholder="例：山田"><div class="hint" id="seLine"></div></div>
+    <div class="box"><h3>区分</h3><div class="opts" id="seKind"></div></div>
+    <div class="box"><h3>状態</h3><div class="opts" id="seStatus"></div></div>
+    <div class="box"><h3>出発などの報告</h3><div class="opts" id="seReport"></div></div>
+    <div class="box" id="seShiftBox"><h3>シフトの入力（社員）</h3><div class="opts" id="seShift"></div></div>
+    <div class="box" id="seProxyBox"><h3>報告の代理入力・取り消し（社員）</h3><div class="opts" id="seProxy"></div></div>
+    <div class="box"><h3>希望の提出</h3><div class="opts" id="seWishNeed"></div></div>
+    <div class="box" id="seWishBox"><h3>希望の出し方</h3><div class="opts" id="seStyle"></div></div>
+    <div class="box" id="seRemindBox"><h3>締切日のお知らせ（まだ出していないとき）</h3><div class="opts" id="seRemind"></div></div>
+    <div class="box"><h3>見る用の表（スプレッドシート）</h3><div class="opts" id="seView"></div>
+      <input class="memo" id="seEmail" type="email" placeholder="Gmailなど（Googleアカウントのメールアドレス）" style="margin-top:8px">
+      <div class="hint">「見られる」にすると、このメールアドレスに見る用の表が共有されます（見るだけ。直すことはできません）</div></div>
+    <div class="box"><h3>資格（資格手当）</h3><div id="seQuals"></div>
+      <button class="newsite" style="margin-top:8px" onclick="openQualPick()">＋ 資格を追加</button>
+      <div class="hint" id="seQualSum"></div></div>
+  </div>
+  <div class="foot"><button class="save" onclick="saveStaff()">保存</button></div>
+</div>
+
+<div class="dlg" id="dlg"><div class="dlg-box"><div class="dlg-msg" id="dlgMsg"></div>
+  <div class="dlg-btns"><button id="dlgNo">やめる</button><button id="dlgYes">OK</button></div></div></div>
+
+<div id="toast"></div>
+<div id="loading">読み込み中…</div>
+
+<script>
+// GitHub Pages 用：google.script.run と同じ書き方で、Apps Script（リンクの a= の場所）を呼ぶ
+(function () {
+  var q = new URLSearchParams(location.search);
+  var API = q.get('a') || '';
+  var okUrl = /^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[\w-]+\/exec$/.test(API);
+  var loaded = false;
+  function stop(msg) {
+    document.body.innerHTML = '<p style="font-size:18px;padding:24px;line-height:1.6;color:#F2F2F5">' + msg + '</p>';
+  }
+  function run() {
+    var s = null, f = null;
+    var p = new Proxy({}, { get: function (_, k) {
+      if (k === 'withSuccessHandler') return function (h) { s = h; return p; };
+      if (k === 'withFailureHandler') return function (h) { f = h; return p; };
+      return function () {
+        var args = Array.prototype.slice.call(arguments);
+        var fail = function (msg) {
+          if (!loaded && /期限|正しく/.test(msg)) return stop(msg); // 最初から開けないときは、画面に大きく出す
+          if (f) f(new Error(msg));
+        };
+        if (!okUrl) return fail('リンクが正しくありません。LINEでもう一度ボタンを押してください。');
+        fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: k, args: args }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (j.ok) { loaded = true; if (s) s(j.r); } else fail(j.error); })
+          .catch(function () { fail('通信できませんでした。電波のよい所で、もう一度お試しください。'); });
+      };
+    } });
+    return p;
+  }
+  window.google = { script: { get run() { return run(); } } };
+})();
+</script>
+<script>
+const TOKEN = (new URLSearchParams(location.search).get('t') || '');
+let day = (function () { var n = new Date(); var d = new Date(n.getTime() + n.getTimezoneOffset() * 60000 + 9 * 3600000); return d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2); })();
+const FIRST = null; // 画面と一緒に届いた、今月分のデータ
+let data = null;
+let edit = null;
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+
+// ---------- 日付 ----------
+function toDate(key) { const p = key.split('/').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function toKey(d) { return d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + ('0' + d.getDate()).slice(-2); }
+function addDay(key, n) { const d = toDate(key); d.setDate(d.getDate() + n); return toKey(d); }
+/** 前の月・次の月。今月なら今日、ほかの月なら1日を開く */
+function moveMonth(n) {
+  const d = toDate(day);
+  const t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const now = new Date();
+  load(t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth() ? toKey(now) : toKey(t));
+}
+function wdClass(d) {
+  const k = toKey(d);
+  const hol = (MONTHS[k.slice(0, 7)] || data || {}).holidays || [];
+  return d.getDay() === 0 || hol.indexOf(k) >= 0 ? 'sun' : d.getDay() === 6 ? 'sat' : '';
+}
+function dayText(key) { const d = toDate(key); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + WD[d.getDay()] + ')'; }
+
+let stripYm = '';
+function renderHeader() {
+  const d = toDate(day), ym = day.slice(0, 7);
+  document.getElementById('monthLabel').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+  const strip = document.getElementById('strip');
+  const keep = stripYm === ym ? strip.scrollLeft : null;
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const todayKey = toKey(new Date());
+  let h = '';
+  for (let i = 1; i <= last; i++) {
+    const x = new Date(d.getFullYear(), d.getMonth(), i);
+    const k = toKey(x);
+    h += '<button data-key="' + k + '" class="' + (k === day ? 'on' : '') + (k === todayKey ? ' today' : '') + '" onclick="load(\'' + k + '\')">' +
+      '<span class="' + wdClass(x) + '">' + WD[x.getDay()] + '</span><b>' + i + '</b><i></i></button>';
+  }
+  strip.innerHTML = h;
+  if (keep !== null) strip.scrollLeft = keep;
+  centerDay(keep !== null);
+  stripYm = ym;
+  updateDots();
+  const canEdit = data && data.canEdit;
+  document.getElementById('tools').innerHTML = '<span class="legend"><span class="l1">足りない</span><span class="l2">うまった</span></span>' +
+    '<button onclick="load(day, true)">最新にする</button>' +
+    (canEdit ? ' <button onclick="openSites()">現場の管理</button>' : '') +
+    (data && data.isAdmin ? ' <button onclick="openStaffs()">人の管理</button>' : '');
+  document.getElementById('fab').style.display = data && data.canEdit ? '' : 'none';
+}
+/** 選んだ日を、日付の列のまん中に寄せる */
+function centerDay(smooth) {
+  const strip = document.getElementById('strip');
+  const b = strip.querySelector('button.on');
+  if (!b) return;
+  const left = b.offsetLeft - (strip.clientWidth - b.offsetWidth) / 2;
+  if (smooth && strip.scrollTo) strip.scrollTo({ left: left, behavior: 'smooth' });
+  else strip.scrollLeft = left;
+}
+/** 日付の下の印：赤＝人が足りない枠がある、緑＝全部うまった、なし＝枠がない */
+function updateDots() {
+  const m = MONTHS[day.slice(0, 7)];
+  document.querySelectorAll('#strip button').forEach(b => {
+    const i = b.querySelector('i');
+    const fs = m ? m.frames.filter(f => f.key === b.dataset.key) : [];
+    i.className = !fs.length ? '' : fs.some(f => f.need && f.members.length < f.need) ? 'lack' : 'full';
+  });
+}
+
+// ---------- サーバーとのやりとり ----------
+function busy(on) { document.getElementById('loading').style.display = on ? 'grid' : 'none'; }
+function fail(e) { busy(false); toast((e && e.message) || String(e)); }
+function call(fn, args, done) {
+  busy(true);
+  google.script.run.withSuccessHandler(r => { busy(false); done(r); }).withFailureHandler(fail)[fn].apply(null, args);
+}
+// ---------- 月ごとのデータ（スマホの中に置いておき、日付の切り替えはGoogleに取りに行かない） ----------
+const MONTHS = {};
+const loadingMonth = {};
+function setMonth(r) {
+  MONTHS[r.ym] = r;
+  return dayData(day);
+}
+function isOff(key) {
+  const d = toDate(key);
+  const hol = (MONTHS[key.slice(0, 7)] || {}).holidays || [];
+  return d.getDay() === 0 || d.getDay() === 6 || hol.indexOf(key) >= 0;
+}
+/** 月のデータから、1日分の表示用データを作る */
+function dayData(key) {
+  const m = MONTHS[key.slice(0, 7)];
+  const off = isOff(key);
+  return {
+    key: key, isAdmin: m.isAdmin, canEdit: m.canEdit, canProxy: m.canProxy, holidays: m.holidays,
+    sites: m.sites.map(s => Object.assign({}, s, off && s.hStart ? { start: s.hStart, end: s.hEnd } : {})), // 土日祝は土日祝の時間
+    frames: m.frames.filter(f => f.key === key),
+    people: m.people.map(p => Object.assign({}, p, { wish: m.wishes[p.nick + '|' + key] || null })),
+  };
+}
+/** 隣の月を、裏で先に読んでおく（月末・月初に近いとき） */
+function prefetch(key) {
+  const d = toDate(key);
+  const near = [];
+  if (d.getDate() >= 22) near.push(new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  if (d.getDate() <= 7) near.push(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  near.forEach(x => {
+    const k = toKey(x), ym = k.slice(0, 7);
+    if (MONTHS[ym] || loadingMonth[ym]) return;
+    loadingMonth[ym] = true;
+    google.script.run.withSuccessHandler(r => { MONTHS[r.ym] = r; loadingMonth[ym] = false; })
+      .withFailureHandler(() => { loadingMonth[ym] = false; }).apiLoad(TOKEN, k);
+  });
+}
+function load(key, fresh) {
+  day = key;
+  const ym = key.slice(0, 7);
+  if (MONTHS[ym] && !fresh) {
+    data = dayData(key);
+    renderHeader();
+    renderList();
+    prefetch(key);
+    return;
+  }
+  renderHeader();
+  call('apiLoad', [TOKEN, key], r => { data = setMonth(r); renderHeader(); renderList(); prefetch(key); });
+}
+
+// ---------- 一覧 ----------
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function siteOf(code) { return data.sites.find(s => s.code === code) || { code: code, name: code, prime: 'その他', color: '#607D8B' }; }
+function textColor(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160 ? '#1D1D1F' : '#FFFFFF';
+}
+function timeText(f) { return f.start ? f.start + '〜' + (f.end || '') : '時間未定'; }
+const OWN = 'Enf'; // 自社の呼び名（受託元としての名前）
+/** まとまりの名前。Enfはクライアントごとに分ける（例：Enf ／ WMJ） */
+function groupOf(s) { return s.prime === OWN && s.client ? OWN + ' ／ ' + s.client : s.prime; }
+/** まとまりの並び順：今のシフト表と同じく、Enf → CREST → ESRR … の順 */
+function primeOrder() {
+  const o = [];
+  data.sites.forEach(s => { if (o.indexOf(groupOf(s)) < 0) o.push(groupOf(s)); });
+  const rank = g => { const i = PRIMES.indexOf(g.split(' ／ ')[0]); return i < 0 ? 99 : i; };
+  return o.map((g, i) => [g, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(x => x[0]);
+}
+
+function renderList() {
+  updateDots();
+  const el = document.getElementById('list');
+  if (!data.frames.length) {
+    el.innerHTML = '<div class="empty">この日のシフトはまだありません。<br>下の「＋ 現場を追加」から入れてください。</div>';
+    return;
+  }
+  const order = data.sites.map(s => s.code);
+  const frames = data.frames.slice().sort((a, b) => (order.indexOf(a.site) - order.indexOf(b.site)) || (a.start || '99').localeCompare(b.start || '99'));
+  let h = '';
+  primeOrder().concat(['その他']).forEach(p => {
+    const fs = frames.filter(f => groupOf(siteOf(f.site)) === p);
+    if (!fs.length) return;
+    h += '<div class="group">' + esc(p) + '</div>';
+    fs.forEach(f => {
+      const s = siteOf(f.site);
+      const n = f.members.length;
+      const count = f.need ? '<div class="count' + (n < f.need ? ' short' : '') + '">' + n + '/' + f.need + '人</div>' : '';
+      h += '<button class="card" onclick="openEditor(\'' + f.id + '\')"><div class="bar" style="background:' + esc(s.color) + '"></div><div class="body">' +
+        '<div class="title">' + esc(s.code) + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
+        '<div class="chips">' + (n ? f.members.map(m => '<span class="chip">' + esc(m.nick) + (m.own ? '<span style="color:var(--red)"> ' + esc(m.start + '〜' + m.end) + '</span>' : '') + '</span>').join('') : '<span class="chip" style="color:var(--red)">まだ誰もいません</span>') + '</div>' +
+        '</div>' + count + '</button>';
+    });
+  });
+  el.innerHTML = h;
+}
+
+// ---------- ＋ 現場を追加（1 現場 → 2 時間と人数 → 3 日にち） ----------
+const PRIMES = [OWN, 'CREST', 'ESRR', 'GSP', 'Five Sta', 'And', 'ISD FEN', 'GAR'];
+const CLIENTS = ['WMJ', 'FF Group', '臨時警備'];
+const COLORS = ['#E91E63', '#FF00FF', '#0000FF', '#0C343D', '#F08C00', '#607D8B'];
+let A = null;
+function md(key) { const p = key.split('/'); return Number(p[1]) + '/' + Number(p[2]); }
+function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
+/** 画面を開く。あとから開いた画面がいちばん上に来るように、ページの最後へ移す */
+function openSheet(id) {
+  const el = document.getElementById(id);
+  document.body.insertBefore(el, document.getElementById('dlg'));
+  el.classList.add('open');
+}
+function openAdd() {
+  A = { step: 1, code: '', isNew: false, nw: { guard: '', code: '', full: '', prime: OWN, client: '', kind: '臨時案件', color: COLORS[0], start: '', end: '', hStart: '', hEnd: '' },
+    useStd: true, need: 1, ym: day.slice(0, 7), picked: {} };
+  A.picked[day] = true;
+  document.getElementById('adSearch').value = '';
+  ['nsCode', 'nsFull', 'nsStart', 'nsEnd', 'nsHStart', 'nsHEnd', 'adStart', 'adEnd', 'adMemo'].forEach(id => { document.getElementById(id).value = ''; });
+  renderAdd();
+  document.getElementById('add').classList.add('open');
+}
+/** 選んだ（または新しく作る）現場の情報 */
+function adSite() {
+  if (!A.isNew) return siteOf(A.code);
+  const n = A.nw;
+  return { code: n.code.trim(), name: n.full.trim() || n.code.trim(), kind: n.kind, color: n.color, start: n.start, end: n.end, hStart: n.hStart, hEnd: n.hEnd };
+}
+function renderAdd() {
+  const names = ['現場', '時間と人数', '日にち'];
+  document.getElementById('adSteps').innerHTML = names.map((n, i) => '<div class="' + (i + 1 === A.step ? 'on' : i + 1 < A.step ? 'done' : '') + '">' + (i + 1) + ' ' + n + '</div>').join('');
+  [1, 2, 3].forEach(i => { document.getElementById('ad' + i).style.display = i === A.step ? '' : 'none'; });
+  document.getElementById('adBack').style.display = A.step === 1 ? 'none' : '';
+  const go = document.getElementById('adGo');
+  go.disabled = false;
+  document.querySelector('#add .sheet-body').scrollTop = 0;
+  if (A.step === 1) {
+    document.getElementById('adTitle').textContent = A.isNew ? '新しい現場' : '現場を追加';
+    document.getElementById('adSearch').style.display = A.isNew ? 'none' : '';
+    document.getElementById('adList').style.display = A.isNew ? 'none' : '';
+    document.getElementById('adNewBtn').style.display = A.isNew ? 'none' : '';
+    document.getElementById('adNew').style.display = A.isNew ? '' : 'none';
+    go.textContent = A.isNew ? '次へ（時間と人数）' : '現場をタップしてください';
+    go.disabled = !A.isNew;
+    if (A.isNew) renderNewSite(); else renderAdList();
+  } else if (A.step === 2) {
+    const s = adSite();
+    document.getElementById('adTitle').textContent = s.code;
+    const res = s.kind === '常駐';
+    document.getElementById('adStdBox').style.display = res ? '' : 'none';
+    document.getElementById('adStd').innerHTML = [[true, '所定の時間'], [false, '時間を変える']].map(o => '<button class="opt' + (o[0] === A.useStd ? ' on' : '') + '" onclick="A.useStd=' + o[0] + ';renderAdd()">' + o[1] + '</button>').join('');
+    document.getElementById('adStdHint').textContent = '平日 ' + (s.start ? s.start + '〜' + s.end : '未定') + '／土日祝 ' + (s.hStart ? s.hStart + '〜' + s.hEnd : s.start ? s.start + '〜' + s.end : '未定') + '。日にちに合わせて自動で入ります';
+    document.getElementById('adTimeBox').style.display = res && A.useStd ? 'none' : '';
+    document.getElementById('adTimeTitle').textContent = res ? 'この枠の時間' : '時間';
+    document.getElementById('adTimeHint').textContent = res ? '選んだ日すべてに、この時間が入ります' : 'まだ決まっていなければ空のままでOK（あとから入れられます）。夜勤もそのまま入れてください（例：17:00〜8:00）';
+    document.getElementById('adNeedV').textContent = A.need + '人';
+    go.textContent = '次へ（日にち）';
+  } else {
+    document.getElementById('adTitle').textContent = adSite().code;
+    renderAdCal();
+  }
+}
+function renderAdList() {
+  const q = document.getElementById('adSearch').value.trim().toLowerCase();
+  const todayKey = toKey(new Date());
+  // 常駐はいつも出す。その日（期間）だけの現場は、終わっていないものだけ。検索したときは全部から
+  const hit = s => !s.deleted && (q ? (s.code + ' ' + s.name).toLowerCase().indexOf(q) >= 0 : (!s.day || (s.dayEnd || s.day) >= todayKey));
+  let h = '';
+  primeOrder().forEach(p => {
+    const list = data.sites.filter(s => groupOf(s) === p && hit(s));
+    if (!list.length) return;
+    h += '<div class="group">' + esc(p) + '</div><div class="tiles">';
+    list.forEach(s => {
+      h += '<button class="tile' + (s.code === A.code ? ' on' : '') + '" style="background:' + esc(s.color) + ';color:' + textColor(s.color) + '" onclick="pickAdSite(\'' + esc(s.code) + '\')">' +
+        esc(s.code) + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + (s.kind === '常駐' ? (s.start ? esc(s.start + '〜' + s.end) : '常駐') : s.day ? esc(md(s.day) + (s.dayEnd ? '〜' + md(s.dayEnd) : '')) : esc(s.kind)) + '</small></button>';
+    });
+    h += '</div>';
+  });
+  document.getElementById('adList').innerHTML = h || '<div class="empty">見つかりません。<br>下の「＋ 新しい現場を作る」から作ってください。</div>';
+}
+function pickAdSite(code) {
+  A.code = code;
+  A.isNew = false;
+  A.useStd = true;
+  A.step = 2;
+  renderAdd();
+}
+function startNewSite() {
+  A.isNew = true;
+  A.code = '';
+  const q = document.getElementById('adSearch').value.trim();
+  if (q && !A.nw.code) { A.nw.code = q.slice(0, 8); document.getElementById('nsCode').value = A.nw.code; }
+  renderAdd();
+}
+function renderNewSite() {
+  const n = A.nw;
+  const primes = PRIMES.slice();
+  data.sites.forEach(s => { if (primes.indexOf(s.prime) < 0) primes.push(s.prime); });
+  const clients = CLIENTS.slice();
+  data.sites.forEach(s => { if (s.client && clients.indexOf(s.client) < 0) clients.push(s.client); });
+  const chips = (id, list, cur, key) => {
+    document.getElementById(id).innerHTML = list.map(v => '<button class="opt' + (v[0] === cur ? ' on' : '') + '" onclick="A.nw.' + key + '=\'' + esc(v[0]) + '\';renderNewSite()">' + esc(v[1]) + '</button>').join('');
+  };
+  chips('nsGuard', [['身辺', '身辺'], ['その他', 'その他']], n.guard, 'guard');
+  chips('nsPrime', primes.map(p => [p, p]), n.prime, 'prime');
+  document.getElementById('nsClientBox').style.display = n.prime === OWN ? '' : 'none';
+  chips('nsClient', clients.map(c => [c, c]), n.client, 'client');
+  chips('nsKind', [['臨時案件', '臨時'], ['IM案件', 'IM案件'], ['常駐', '常駐（毎日使う）']], n.kind, 'kind');
+  document.getElementById('nsTimeBox').style.display = n.kind === '常駐' ? '' : 'none';
+  document.getElementById('nsColor').innerHTML = COLORS.map(c => '<button class="swatch' + (c === n.color ? ' on' : '') + '" style="background:' + c + '" onclick="A.nw.color=\'' + c + '\';renderNewSite()" aria-label="色"></button>').join('');
+}
+function adNeed(n) { A.need = Math.max(1, A.need + n); document.getElementById('adNeedV').textContent = A.need + '人'; }
+function adBackStep() { A.step--; renderAdd(); }
+function adNext() {
+  if (A.step === 1) {
+    const n = A.nw, code = n.code.trim();
+    if (!n.guard) return toast('最初に「身辺」か「その他」を選んでください');
+    if (!code) return toast('略称を入れてください');
+    const same = data.sites.find(s => s.code === code);
+    if (same) return toast('略称「' + code + '」はもう使われています' + (same.deleted ? '（消した現場です。現場の管理から元に戻せます）' : '。今ある現場から選んでください'));
+    if (n.prime === OWN && !n.client) return toast('クライアントを選んでください');
+    if (n.kind === '常駐' && (!!n.start !== !!n.end || !!n.hStart !== !!n.hEnd)) return toast('所定の時間は、開始と終了の両方を入れてください');
+    A.useStd = true;
+    A.step = 2;
+    return renderAdd();
+  }
+  if (A.step === 2) {
+    const st = document.getElementById('adStart').value, en = document.getElementById('adEnd').value;
+    const fixed = adSite().kind === '常駐' && A.useStd;
+    if (!fixed && !!st !== !!en) return toast('開始と終了の両方を入れてください（未定なら両方とも空欄）');
+    if (adSite().kind === '常駐' && !A.useStd && !st) return toast('時間を入れてください（所定の時間でよければ「所定の時間」を選んでください）');
+    A.step = 3;
+    return ensureMonth(A.ym, renderAdd);
+  }
+  makeFrames();
+}
+function adMonth(n) {
+  const p = A.ym.split('/').map(Number);
+  A.ym = toKey(new Date(p[0], p[1] - 1 + n, 1)).slice(0, 7);
+  ensureMonth(A.ym, renderAdCal);
+}
+function monthDays(ym) {
+  const p = ym.split('/').map(Number);
+  const list = [];
+  for (let i = 1; i <= new Date(p[0], p[1], 0).getDate(); i++) list.push(ym + '/' + ('0' + i).slice(-2));
+  return list;
+}
+function adHas(k) {
+  const m = MONTHS[k.slice(0, 7)];
+  return !A.isNew && !!(m && m.frames.some(f => f.key === k && f.site === A.code));
+}
+function adPick(kind) {
+  const todayKey = toKey(new Date());
+  monthDays(A.ym).forEach(k => {
+    if (kind === 'none') return delete A.picked[k];
+    const off = isOff(k);
+    if (k >= todayKey && !adHas(k) && (kind === 'all' || (kind === 'off' ? off : !off))) A.picked[k] = true;
+  });
+  renderAdCal();
+}
+function adToggle(k) { if (A.picked[k]) delete A.picked[k]; else A.picked[k] = true; renderAdCal(); }
+function renderAdCal() {
+  const p = A.ym.split('/').map(Number);
+  document.getElementById('adMonthV').textContent = p[0] + '年' + p[1] + '月';
+  const lead = (new Date(p[0], p[1] - 1, 1).getDay() + 6) % 7; // 月曜はじまり
+  let h = ['月', '火', '水', '木', '金', '土', '日'].map(w => '<div class="wd">' + w + '</div>').join('');
+  for (let i = 0; i < lead; i++) h += '<div></div>';
+  monthDays(A.ym).forEach(k => {
+    const d = toDate(k), has = adHas(k);
+    h += '<button class="' + (A.picked[k] ? 'on ' : '') + (has ? 'has ' : '') + wdClass(d) + '" onclick="adToggle(\'' + k + '\')">' + d.getDate() + (has ? '<small>済</small>' : '') + '</button>';
+  });
+  document.getElementById('adCal').innerHTML = h;
+  const ks = Object.keys(A.picked).sort();
+  const s = adSite();
+  const st = document.getElementById('adStart').value, en = document.getElementById('adEnd').value;
+  const t = s.kind === '常駐' && A.useStd ? '所定の時間' : st ? st + '〜' + en : '時間未定';
+  document.getElementById('adSum').textContent = ks.length
+    ? (ks.length === 1 ? dayText(ks[0]) + ' の1日' : md(ks[0]) + '〜' + md(ks[ks.length - 1]) + ' のうち ' + ks.length + '日') + '\n' + s.code + '　' + t + '　' + A.need + '人ずつ'
+    : 'カレンダーで日にちをタップしてください';
+  const go = document.getElementById('adGo');
+  go.textContent = ks.length ? ks.length + '日分の枠を作る' : '日にちを選んでください';
+  go.disabled = !ks.length;
+}
+function makeFrames() {
+  const keys = Object.keys(A.picked).sort();
+  if (!keys.length) return toast('日にちを選んでください');
+  const s = adSite();
+  const fixed = s.kind === '常駐' && A.useStd;
+  const one = keys.length === 1;
+  const p = {
+    keys: keys, need: A.need, memo: document.getElementById('adMemo').value,
+    start: fixed ? '' : document.getElementById('adStart').value, end: fixed ? '' : document.getElementById('adEnd').value,
+    view: one ? keys[0] : day, // 1日だけなら、その日を開いて人を選べるようにする
+  };
+  if (A.isNew) p.site = { guard: A.nw.guard === '身辺', code: A.nw.code.trim(), full: A.nw.full.trim(), prime: A.nw.prime, client: A.nw.prime === OWN ? A.nw.client : '', kind: A.nw.kind, color: A.nw.color, start: A.nw.start, end: A.nw.end, hStart: A.nw.hStart, hEnd: A.nw.hEnd };
+  else p.code = A.code;
+  // 新しい現場は、保存の前に「身辺」か「その他」かをもう一度確かめる（まちがい防止）
+  if (A.isNew) {
+    const g = A.nw.guard;
+    return ask('「' + p.site.code + '」を「' + g + '」の現場として追加します。\nよろしいですか？', g + 'を追加').then(ok => { if (ok) sendMake(p); });
+  }
+  sendMake(p);
+}
+function sendMake(p) {
+  call('apiMakeFrames', [TOKEN, p], r => {
+    Object.keys(MONTHS).forEach(k => { if (k !== r.ym && r.months.indexOf(k) >= 0) delete MONTHS[k]; }); // 枠を作ったほかの月は読み直す
+    day = r.key;
+    data = setMonth(r);
+    closeSheet('add');
+    renderHeader();
+    renderList();
+    const f = r.firstId && data.frames.find(x => x.id === r.firstId);
+    if (f) {
+      showEditor(JSON.parse(JSON.stringify(f)));
+      toast(r.code + ' の枠を作りました。人を選んで「保存」を押してください');
+    } else {
+      toast(r.code + ' の枠を ' + r.made + '日分 作りました\n人は日ごとに入れてください');
+    }
+  });
+}
+
+// ---------- 枠の編集 ----------
+function openEditor(id) {
+  const f = data.frames.find(x => x.id === id);
+  showEditor(JSON.parse(JSON.stringify(f)));
+}
+function pad(t) { if (!t) return ''; const p = t.split(':'); return ('0' + p[0]).slice(-2) + ':' + p[1]; }
+
+/** 希望から、並び順と表示を決める */
+function availability(p) {
+  const w = p.wish;
+  if (w && w.type === '休み') return { cls: 'no', label: '休み希望', rank: 4 };
+  if (w && w.type.indexOf('◯') === 0) return { cls: 'ok', label: '◯ 終日OK', rank: 0 };
+  if (w && w.type === '夜勤のみ') return { cls: 'part', label: '夜勤のみ', rank: 1 };
+  if (w && w.type === '時間の指定') return { cls: 'part', label: (w.from || '') + '〜' + (w.to || ''), rank: 1 };
+  if (p.style === '休みの日を出す') return { cls: 'ok', label: '出勤可', rank: 0 };
+  if (p.kind === '臨時') return { cls: 'temp', label: '臨時', rank: 2.5 }; // 臨時の人は希望を出さない
+  return { cls: 'none', label: '希望なし', rank: 2 };
+}
+
+function showEditor(f) {
+  edit = f;
+  const s = siteOf(f.site);
+  const t = document.getElementById('edTitle');
+  t.textContent = s.code + '　' + dayText(day);
+  document.getElementById('edStart').value = pad(f.start);
+  document.getElementById('edEnd').value = pad(f.end);
+  document.getElementById('edMemo').value = f.memo || '';
+  document.getElementById('edDel').style.display = f.id ? '' : 'none';
+  document.getElementById('edReadonly').style.display = data.canEdit ? 'none' : '';
+  document.getElementById('edEdit').style.display = data.canEdit ? '' : 'none';
+  document.getElementById('edFoot').style.display = data.canEdit ? '' : 'none';
+  document.getElementById('edPeopleTitle').textContent = data.canEdit ? '人をタップして選ぶ' : 'この現場の人';
+  renderNeed();
+
+  const selected = f.members.map(m => m.nick);
+  const locked = f.members.filter(m => m.reported).map(m => m.nick);
+  const others = {};
+  // 同じ日のほかの現場。時間は、その人の時間（1人だけ変えた早退・残業も反映）
+  data.frames.filter(x => x.id !== f.id).forEach(x => x.members.forEach(m => {
+    (others[m.nick] = others[m.nick] || []).push(x.site + ' ' + (m.start ? m.start + '〜' + (m.end || '') : '時間未定'));
+  }));
+  const people = data.people.map(p => {
+    const a = availability(p);
+    return { nick: p.nick, a: a, other: others[p.nick] || [], memo: p.wish && p.wish.memo, note: p.note, rank: a.rank + (others[p.nick] ? 0.5 : 0) };
+  }).filter(p => data.canEdit || selected.indexOf(p.nick) >= 0) // 見るだけの人には、この現場の人だけを出す
+    .sort((x, y) => (selected.indexOf(y.nick) >= 0) - (selected.indexOf(x.nick) >= 0) || x.rank - y.rank);
+
+  const row = p => {
+    const sel = selected.indexOf(p.nick) >= 0;
+    const lock = locked.indexOf(p.nick) >= 0;
+    const m = f.members.find(x => x.nick === p.nick);
+    const sub = [];
+    if (p.other.length) sub.push('他：' + p.other.join('、'));
+    if (p.memo) sub.push('メモ：' + p.memo);
+    if (p.note) sub.push('特記：' + p.note);
+    if (lock && data.canEdit) sub.push('報告済みのため外せません');
+    const own = m && m.own ? '<div class="sub own">この人だけ ' + esc(m.start + '〜' + m.end) + '</div>' : '';
+    // 保存済みの人には「時間・報告」ボタン（社長）、「報告」ボタン（代理を許可された社員）を出す
+    const timeBtn = m && f.id && data.canProxy ? '<button class="ptime" onclick="event.stopPropagation();openPersonTime(\'' + esc(p.nick) + '\')">' + (data.isAdmin ? '時間・報告' : '報告') + '</button>' : '';
+    return '<div class="person' + (sel ? ' sel' : '') + (lock ? ' lock' : '') + '" role="button" data-nick="' + esc(p.nick) + '"' + (p.a.cls === 'no' ? ' data-off="1"' : '') + ' onclick="toggle(this)">' +
+      '<span class="ck">✓</span><span class="who"><div class="name">' + esc(p.nick) + '</div>' + own + (sub.length ? '<div class="sub">' + esc(sub.join(' / ')) + '</div>' : '') + '</span>' +
+      '<span class="badge ' + p.a.cls + '">' + esc(p.a.label) + '</span>' + timeBtn + '</div>';
+  };
+  // 希望なしの人と休み希望の人は、ふだんはたたんでおく（選ばれている人は出す）
+  const isSel = p => selected.indexOf(p.nick) >= 0;
+  // 臨時の人（ESRRの応援など）は、別のボタンにたたむ
+  const shown = people.filter(p => isSel(p) || ['no', 'none', 'temp'].indexOf(p.a.cls) < 0);
+  const noWish = people.filter(p => !isSel(p) && p.a.cls === 'none');
+  const temps = people.filter(p => !isSel(p) && p.a.cls === 'temp');
+  const rest = people.filter(p => !isSel(p) && p.a.cls === 'no');
+  const fold = (list, cls, label) => list.length
+    ? '<button class="more' + cls + '" onclick="this.nextElementSibling.style.display=\'\';this.remove()">' + label + '（' + list.length + '人）を表示</button><div style="display:none">' + list.map(row).join('') + '</div>'
+    : '';
+  document.getElementById('edPeople').innerHTML =
+    (shown.map(row).join('') || (noWish.length || rest.length ? '' : '<div class="empty">登録されている人がいません。</div>')) +
+    fold(noWish, ' gray', '希望なしの人') + fold(temps, ' blue', '臨時の人') + fold(rest, '', '休み希望の人');
+  updateSave();
+  openSheet('editor');
+  document.querySelector('#editor .sheet-body').scrollTop = 0;
+}
+
+function toggle(btn) {
+  if (!data.canEdit) return;
+  if (btn.classList.contains('lock')) return toast('報告済みの人は外せません');
+  const flip = () => { btn.classList.toggle('sel'); updateSave(); };
+  if (!btn.classList.contains('sel') && btn.dataset.off) {
+    return ask(btn.dataset.nick + 'さんは休み希望です。シフトに入れますか？', '入れる').then(ok => { if (ok) flip(); });
+  }
+  flip();
+}
+// ---------- 1人だけ時間を変える（社長だけ） ----------
+let pt = null;
+function openPersonTime(nick) {
+  const saved = edit.members.map(m => m.nick).sort().join(',');
+  if (data.canEdit && saved !== selectedNicks().sort().join(',')) return toast('人の選び方を変えたときは、先に「保存」を押してください');
+  const m = edit.members.find(x => x.nick === nick);
+  pt = { nick: nick, frameId: edit.id };
+  document.getElementById('ptTitle').textContent = nick + 'さん';
+  document.getElementById('ptStart').value = pad(m.start);
+  document.getElementById('ptEnd').value = pad(m.end);
+  document.getElementById('ptHint').textContent = '現場の時間：' + (edit.start ? edit.start + '〜' + edit.end : '未定') + '。ここで変えると、' + nick + 'さんだけの時間になります（勤務時間の集計にも入ります）。';
+  document.getElementById('ptReset').style.display = m.own ? '' : 'none';
+  document.getElementById('ptTimeBox').style.display = data.isAdmin ? '' : 'none';
+  renderReports();
+  openSheet('ptime');
+}
+function nowHM() { const d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function renderReports() {
+  const m = edit.members.find(x => x.nick === pt.nick) || {};
+  const rows = [['出発・転進', m.dep], ['上番', m.on], ['下番', m.off]];
+  document.getElementById('ptReports').innerHTML = rows.map((r, i) => r[1]
+    ? '<div class="rep"><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span><button class="mini red" onclick="setReport(\'' + r[0] + '\', \'\')">取り消す</button></div>'
+    : '<div class="rep"><b>' + r[0] + '</b><span style="color:var(--sub)">未報告</span><input type="time" id="rp' + i + '" value="' + nowHM() + '"><button class="mini" onclick="setReport(\'' + r[0] + '\', document.getElementById(\'rp' + i + '\').value)">代わりに入れる</button></div>'
+  ).join('');
+}
+function setReport(col, time) {
+  if (!time) {
+    return ask(pt.nick + 'さんの「' + col + '」の報告を取り消しますか？', '取り消す', true).then(ok => { if (ok) sendReport(col, time); });
+  }
+  sendReport(col, time);
+}
+function sendReport(col, time) {
+  call('apiSetReport', [TOKEN, day, pt.frameId, pt.nick, col, time], r => {
+    data = setMonth(r);
+    renderList();
+    const f = data.frames.find(x => x.id === pt.frameId);
+    if (f) {
+      showEditor(JSON.parse(JSON.stringify(f)));
+      renderReports();
+    }
+    toast(time ? col + 'を代わりに入れました' : col + 'の報告を取り消しました');
+  });
+}
+function notifiedText(r) { return r.notified && r.notified.length ? '\n' + r.notified.join('・') + 'さんにLINEで知らせました' : ''; }
+
+// ---------- 枠をまとめて消す（現場の管理から） ----------
+let bk = null;
+function openBulk(code) {
+  bk = { site: code, ym: day.slice(0, 7), picked: {} };
+  document.getElementById('bkTitle').textContent = code + ' の枠を消す';
+  ensureMonth(bk.ym, renderBulk);
+  openSheet('bulk');
+}
+function bulkMonth(n) {
+  const p = bk.ym.split('/').map(Number);
+  bk.ym = toKey(new Date(p[0], p[1] - 1 + n, 1)).slice(0, 7);
+  bk.picked = {};
+  ensureMonth(bk.ym, renderBulk);
+}
+/** その月のデータがスマホになければ読みに行く */
+function ensureMonth(ym, done) {
+  if (MONTHS[ym]) return done();
+  call('apiLoad', [TOKEN, ym + '/01'], r => { MONTHS[r.ym] = r; done(); });
+}
+function bulkDone(key) {
+  const m = MONTHS[key.slice(0, 7)];
+  return !!(m && m.frames.some(f => f.key === key && f.site === bk.site));
+}
+function bulkPick(kind) {
+  bk.picked = {};
+  if (kind !== 'none') monthDays(bk.ym).forEach(k => {
+    const off = isOff(k);
+    if (bulkDone(k) && (kind === 'all' || (kind === 'off' ? off : !off))) bk.picked[k] = true;
+  });
+  renderBulk();
+}
+function bulkToggle(k) {
+  if (!bulkDone(k)) return;
+  if (bk.picked[k]) delete bk.picked[k]; else bk.picked[k] = true;
+  renderBulk();
+}
+function renderBulk() {
+  const p = bk.ym.split('/').map(Number);
+  document.getElementById('bkMonth').textContent = p[0] + '年' + p[1] + '月';
+  const lead = (new Date(p[0], p[1] - 1, 1).getDay() + 6) % 7; // 月曜はじまり
+  let h = ['月', '火', '水', '木', '金', '土', '日'].map(w => '<div class="wd">' + w + '</div>').join('');
+  for (let i = 0; i < lead; i++) h += '<div></div>';
+  monthDays(bk.ym).forEach(k => {
+    const d = toDate(k), done = bulkDone(k);
+    const cls = (bk.picked[k] ? ' del' : done ? '' : ' done') + ' ' + wdClass(d);
+    h += '<button class="' + cls + '" onclick="bulkToggle(\'' + k + '\')">' + d.getDate() + (done ? '<small>枠あり</small>' : '') + '</button>';
+  });
+  document.getElementById('bkCal').innerHTML = h;
+  const n = Object.keys(bk.picked).length;
+  document.getElementById('bkSave').textContent = n ? n + '日分の枠を消す' : '日付を選んでください';
+}
+function bulkSave() {
+  const keys = Object.keys(bk.picked).sort();
+  if (!keys.length) return toast('日付を選んでください');
+  ask(bk.site + ' の枠を ' + keys.length + '日分 消しますか？\n（入っている人も外れます）', '消す', true).then(ok => {
+    if (!ok) return;
+    call('apiBulkDelete', [TOKEN, bk.site, keys], r => {
+      MONTHS[r.ym] = r;
+      if (MONTHS[day.slice(0, 7)]) data = dayData(day);
+      renderList();
+      bk.picked = {};
+      renderBulk();
+      toast(r.removed + '日分の枠を消しました' + (r.kept ? '（' + r.kept + '日は報告済みの人がいるので残しました）' : '') + notifiedText(r));
+    });
+  });
+}
+
+// ---------- 現場の管理（社長だけ） ----------
+function openSites() {
+  renderSites();
+  document.getElementById('sitesheet').classList.add('open');
+}
+function renderSites() {
+  const live = data.sites.filter(s => !s.deleted && (!s.day || (s.dayEnd || s.day) >= toKey(new Date())));
+  const gone = data.sites.filter(s => s.deleted);
+  const row = (s, btn) => '<div class="site-row" style="flex-wrap:wrap"><span class="dot" style="background:' + esc(s.color) + '"></span><span class="who"><div class="name">' + esc(s.code) + '</div><div class="sub">' +
+    esc((s.guard ? '身辺・' : '') + (s.name !== s.code ? s.name + '　' : '') + s.kind + (s.start ? '　' + s.start + '〜' + s.end : '') + (s.day ? '　' + md(s.day) + (s.dayEnd ? '〜' + md(s.dayEnd) : '') : '')) + '</div></span>' +
+    '<span style="display:flex;gap:6px">' + btn + '</span></div>';
+  const btns = s => (data.isAdmin ? '<button class="mini" style="background:var(--gray-bg);color:var(--ink)" onclick="openSiteEdit(\'' + esc(s.code) + '\')">直す</button>' : '') +
+    '<button class="mini" style="background:var(--gray-bg);color:var(--ink)" onclick="openBulk(\'' + esc(s.code) + '\')">枠を消す</button>' +
+    (data.isAdmin ? '<button class="mini red" onclick="deleteSite(\'' + esc(s.code) + '\')">削除</button>' : '');
+  let h = '';
+  primeOrder().forEach(p => {
+    const list = live.filter(s => groupOf(s) === p);
+    if (!list.length) return;
+    h += '<div class="group">' + esc(p) + '</div>' + list.map(s => row(s, btns(s))).join('');
+  });
+  if (gone.length && data.isAdmin) h += '<div class="group">消した現場</div>' + gone.map(s => row(s, '<button class="mini" onclick="restoreSite(\'' + esc(s.code) + '\')">元に戻す</button>')).join('');
+  document.getElementById('siteList').innerHTML = h || '<div class="empty">現場がありません。</div>';
+}
+function afterSiteChange(r, msg) {
+  Object.keys(MONTHS).forEach(k => { if (k !== r.ym) delete MONTHS[k]; }); // ほかの月の枠も消えることがあるので読み直す
+  data = setMonth(r);
+  renderList();
+  renderSites();
+  toast(msg + notifiedText(r));
+}
+function deleteSite(code) {
+  ask('「' + code + '」を消しますか？\n（これまでのシフトと勤務時間は残ります）', '消す', true).then(ok => {
+    if (!ok) return;
+    call('apiDeleteSite', [TOKEN, day, code, false], r => {
+      if (!r.needConfirm) return afterSiteChange(r, code + ' を消しました');
+      ask('「' + code + '」の今日以降の枠が ' + r.count + '件あります。一緒に消しますか？\n（報告済みの枠は残します）', '一緒に消す', true).then(ok2 => {
+        if (!ok2) return;
+        call('apiDeleteSite', [TOKEN, day, code, true], r2 => afterSiteChange(r2, code + ' と今日以降の枠 ' + r2.removed + '件を消しました' + (r2.kept ? '（報告済みの ' + r2.kept + '件は残しました）' : '')));
+      });
+    });
+  });
+}
+function restoreSite(code) {
+  call('apiRestoreSite', [TOKEN, day, code], r => afterSiteChange(r, code + ' を元に戻しました'));
+}
+let sd = null;
+function openSiteEdit(code) {
+  const s = siteOf(code);
+  sd = { code: code, color: s.color, resident: s.kind === '常駐', guard: s.guard ? '身辺' : 'その他' };
+  document.getElementById('sdTitle').textContent = code + ' を直す';
+  document.getElementById('sdCode').value = code;
+  document.getElementById('sdFull').value = s.name || code;
+  document.getElementById('sdStart').value = pad(s.start);
+  document.getElementById('sdEnd').value = pad(s.end);
+  document.getElementById('sdHStart').value = pad(s.hStart);
+  document.getElementById('sdHEnd').value = pad(s.hEnd);
+  document.getElementById('sdTimeBox').style.display = sd.resident ? '' : 'none';
+  renderSiteColor();
+  openSheet('siteedit');
+}
+function renderSiteGuard() {
+  document.getElementById('sdGuard').innerHTML = ['身辺', 'その他'].map(g => '<button class="opt' + (g === sd.guard ? ' on' : '') + '" onclick="sd.guard=\'' + g + '\';renderSiteGuard()">' + g + '</button>').join('');
+}
+function renderSiteColor() {
+  renderSiteGuard();
+  const list = COLORS.indexOf(sd.color) < 0 ? [sd.color].concat(COLORS) : COLORS;
+  document.getElementById('sdColor').innerHTML = list.map(c => '<button class="swatch' + (c === sd.color ? ' on' : '') + '" style="background:' + esc(c) + '" onclick="sd.color=\'' + esc(c) + '\';renderSiteColor()" aria-label="色"></button>').join('');
+}
+function saveSite() {
+  const v = id => document.getElementById(id).value;
+  const p = { code: sd.code, newCode: v('sdCode').trim(), full: v('sdFull').trim(), color: sd.color, guard: sd.guard === '身辺', start: v('sdStart'), end: v('sdEnd'), hStart: v('sdHStart'), hEnd: v('sdHEnd') };
+  if (!p.newCode) return toast('略称を入れてください');
+  if (sd.resident && (!!p.start !== !!p.end || !!p.hStart !== !!p.hEnd)) return toast('所定の時間は、開始と終了の両方を入れてください');
+  call('apiEditSite', [TOKEN, day, p], r => {
+    closeSheet('siteedit');
+    afterSiteChange(r, (p.newCode !== sd.code ? sd.code + ' を ' + p.newCode + ' に変えました' : '保存しました'));
+  });
+}
+
+// ---------- 人の管理（社長だけ） ----------
+let staffList = [], se = null, QTREE = [], QCAP = 50000;
+function setStaff(r) { staffList = r.staff; QTREE = r.tree; QCAP = r.cap; }
+function openStaffs() {
+  call('apiStaffList', [TOKEN], r => { setStaff(r); renderStaffs(); openSheet('staffs'); });
+}
+function renderStaffs() {
+  const groups = [['承認待ち', x => x.status === '承認待ち'], ['在籍', x => x.status === '在籍'], ['退職', x => x.status === '退職']];
+  let h = '';
+  groups.forEach(g => {
+    const list = staffList.filter(g[1]); // 名簿の並び順（並べかえで決めた順）
+    if (!list.length) return;
+    h += '<div class="group">' + g[0] + '（' + list.length + '人）</div>';
+    list.forEach(x => {
+      h += '<button class="srow' + (x.status === '承認待ち' ? ' wait' : '') + '" onclick="openStaff(\'' + esc(x.id) + '\')"><span class="who"><div class="name">' + esc(x.name) +
+        '</div><div class="sub">呼び名：' + esc(x.nick) + (x.lineName ? '　LINE名：' + esc(x.lineName) : '') + (x.quals.length ? '　資格 ' + x.quals.length + '件' : '') + (x.view === '見られる' ? '　見る用◯' : '') + '</div></span><span class="badge none">' + esc(x.kind) + '</span></button>';
+    });
+  });
+  document.getElementById('staffList').innerHTML = h || '<div class="empty">まだ誰も登録されていません。</div>';
+}
+function opts(id, list, cur, key) {
+  document.getElementById(id).innerHTML = list.map(v => '<button class="opt' + (v === cur ? ' on' : '') + '" onclick="se.' + key + '=\'' + v + '\';renderStaff()">' + v + '</button>').join('');
+}
+function openStaff(id) {
+  se = JSON.parse(JSON.stringify(staffList.find(x => x.id === id)));
+  document.getElementById('seName').value = se.name;
+  document.getElementById('seNick').value = se.nick;
+  document.getElementById('seEmail').value = se.email || '';
+  renderStaff();
+  openSheet('staffEdit');
+}
+function renderStaff() {
+  document.getElementById('seTitle').textContent = se.name + 'さん';
+  document.getElementById('seLine').textContent = (se.lineName ? 'LINE名：' + se.lineName + '。' : '') + '呼び名を変えると、これまでのシフトの名前もそろいます。';
+  if (se.self) {
+    document.getElementById('seKind').innerHTML = '<span class="hint">管理者（自分）</span>';
+    document.getElementById('seStatus').innerHTML = '<span class="hint">在籍（自分）</span>';
+  } else {
+    opts('seKind', ['社員', 'アルバイト', '臨時'], se.kind, 'kind');
+    opts('seStatus', se.status === '承認待ち' ? ['承認待ち', '在籍', '退職'] : ['在籍', '退職'], se.status, 'status');
+  }
+  opts('seReport', ['必要', '不要'], se.report, 'report');
+  opts('seShift', ['できる', 'できない'], se.canShift, 'canShift');
+  document.getElementById('seShiftBox').style.display = se.kind === '社員' ? '' : 'none';
+  opts('seProxy', ['できる', 'できない'], se.proxy, 'proxy');
+  document.getElementById('seProxyBox').style.display = se.kind === '社員' ? '' : 'none';
+  opts('seWishNeed', ['必要', '不要'], se.wishNeed, 'wishNeed');
+  opts('seStyle', ['出られる日を出す', '休みの日を出す'], se.style, 'style');
+  opts('seRemind', ['送る', '送らない'], se.wishRemind, 'wishRemind');
+  document.getElementById('seWishBox').style.display = se.wishNeed === '必要' ? '' : 'none';
+  document.getElementById('seRemindBox').style.display = se.wishNeed === '必要' ? '' : 'none';
+  opts('seView', ['見られる', '見られない'], se.view, 'view');
+  renderQuals();
+}
+function saveStaff() {
+  se.name = document.getElementById('seName').value;
+  se.nick = document.getElementById('seNick').value;
+  se.email = document.getElementById('seEmail').value.trim();
+  if (se.view === '見られる' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(se.email)) return toast('見る用の表を見られるようにするには、メールアドレスを入れてください');
+  call('apiSaveStaff', [TOKEN, se], r => {
+    setStaff(r);
+    closeSheet('staffEdit');
+    renderStaffs();
+    toast(r.warn || '保存しました');
+    load(day, true);
+  });
+}
+// ---------- 資格（人の管理の中） ----------
+function yen(n) { return Number(n).toLocaleString() + '円'; }
+function thisYm() { const d = new Date(); return d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+function ymText(ym) { return ym ? ym.slice(0, 4) + '年' + Number(ym.slice(5)) + '月' : ''; }
+/** 資格ID → { family, amount }（同じ系統は上位だけ支給、の計算用） */
+function qualInfo() {
+  const map = {};
+  QTREE.forEach(a => {
+    if (a.id) map[a.id] = { family: a.id, amount: a.amount };
+    (a.items || []).forEach(b => {
+      map[b.id] = { family: b.id, amount: b.amount };
+      if (b.up) map[b.up.id] = { family: b.id, amount: b.up.amount };
+    });
+  });
+  return map;
+}
+function renderQuals() {
+  document.getElementById('seQuals').innerHTML = se.quals.length ? se.quals.map((q, i) =>
+    '<div class="qrow"><span class="who"><div class="name">' + esc(q.name) + '</div><div class="sub" id="qs' + i + '"></div></span>' +
+    '<label class="sub">失効した月 <input type="month" id="ql' + i + '" value="' + (q.lapse ? q.lapse.replace('/', '-') : '') + '" onchange="setLapse(' + i + ', this.value)"></label>' +
+    '<button class="mini" style="background:var(--gray-bg);color:var(--ink)" onclick="setLapse(' + i + ', \'\')">リセット</button>' +
+    '<button class="mini red" onclick="removeQual(' + i + ')">消す</button></div>').join('') : '<div class="hint">まだ資格はありません。</div>';
+  updateQualText();
+}
+/**
+ * 失効した月を入れる・消す。iPhoneの月のくるくるは、止まるたびに値が変わるので、
+ * ここでは一覧を作り直さない（作り直すと、選んでいる途中でくるくるが閉じてしまう）
+ */
+function setLapse(i, v) {
+  se.quals[i].lapse = v ? v.replace('-', '/') : '';
+  const el = document.getElementById('ql' + i);
+  if (el && !v) el.value = '';
+  updateQualText();
+}
+/** 資格ごとの状態（支給中・失効など）と、今月の合計だけを書き直す */
+function updateQualText() {
+  const info = qualInfo(), ym = thisYm();
+  const top = {};
+  se.quals.filter(q => (!q.start || q.start <= ym) && (!q.lapse || ym <= q.lapse)).forEach(q => {
+    const f = (info[q.qid] || {}).family || q.qid;
+    if (!top[f] || top[f].amount < q.amount) top[f] = q;
+  });
+  se.quals.forEach((q, i) => {
+    const f = (info[q.qid] || {}).family || q.qid;
+    const state = q.lapse && q.lapse < ym ? '失効（' + ymText(q.lapse) + 'まで）' : q.start && q.start > ym ? ymText(q.start) + 'から'
+      : top[f] === q ? '支給中' + (q.lapse ? '（' + ymText(q.lapse) + 'に失効・翌月から停止）' : '') : '上位の資格を支給中';
+    const el = document.getElementById('qs' + i);
+    if (el) el.textContent = yen(q.amount) + '／月　' + state;
+  });
+  const total = Object.keys(top).reduce((n, f) => n + top[f].amount, 0);
+  document.getElementById('seQualSum').textContent = '今月の資格手当：' + yen(Math.min(QCAP, total)) + (total > QCAP ? '（合計 ' + yen(total) + ' → 上限 ' + yen(QCAP) + '）' : '') +
+    '。同じ系統は上位だけ支給。失効した月の翌月から止まります。「保存」を押すと決まります。';
+}
+function removeQual(i) {
+  ask('「' + se.quals[i].name + '」を消しますか？\n（失効しただけなら、消さずに「失効した月」を入れてください）', '消す', true).then(ok => {
+    if (!ok) return;
+    se.quals.splice(i, 1);
+    renderQuals();
+  });
+}
+let QP = null;
+function openQualPick() {
+  QP = { path: [] };
+  renderQualPick();
+  openSheet('qualpick');
+}
+function qualBack() {
+  if (!QP.path.length) return closeSheet('qualpick');
+  QP.path.pop();
+  renderQualPick();
+}
+function renderQualPick() {
+  const has = id => se.quals.some(q => q.qid === id);
+  const row = (label, sub, amount, onclick, id) => '<button class="qpick' + (id && has(id) ? ' has' : '') + '" onclick="' + onclick + '"><span class="who"><div class="name">' + esc(label) + '</div>' +
+    (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</span>' + (amount ? '<span class="amt">' + yen(amount) + '</span>' : '<span class="amt">›</span>') + '</button>';
+  const lv = QP.path.length;
+  document.getElementById('qpSteps').innerHTML = ['① 種類', '② 資格', '③ 上位の資格'].map((n, i) => '<div class="' + (i === lv ? 'on' : i < lv ? 'done' : '') + '">' + n + '</div>').join('');
+  let h = '';
+  if (lv === 0) {
+    document.getElementById('qpTitle').textContent = '資格を追加';
+    QTREE.forEach((a, i) => { h += a.items ? row(a.name, a.items.length + 'つの資格', 0, 'QP.path=[' + i + '];renderQualPick()') : row(a.name, '', a.amount, 'addQual(\'' + a.id + '\')', a.id); });
+  } else if (lv === 1) {
+    const a = QTREE[QP.path[0]];
+    document.getElementById('qpTitle').textContent = a.name;
+    a.items.forEach((b, j) => {
+      h += b.up ? row(b.name, (b.note ? b.note + '／' : '') + '上位：' + b.up.name, 0, 'QP.path.push(' + j + ');renderQualPick()')
+        : row(b.name, b.note || '', b.amount, 'addQual(\'' + b.id + '\')', b.id);
+    });
+  } else {
+    const b = QTREE[QP.path[0]].items[QP.path[1]];
+    document.getElementById('qpTitle').textContent = b.name;
+    h += '<div class="hint" style="margin-bottom:10px">持っている方を選んでください。両方持っていても、上位（③）だけが支給されます。</div>';
+    h += row('② ' + b.name, b.note || '', b.amount, 'addQual(\'' + b.id + '\')', b.id);
+    h += row('③ ' + b.up.name, b.up.note || '', b.up.amount, 'addQual(\'' + b.up.id + '\')', b.up.id);
+  }
+  document.getElementById('qpList').innerHTML = h;
+}
+function addQual(id) {
+  if (se.quals.some(q => q.qid === id)) return toast('この資格は、もう入っています');
+  let found = null;
+  QTREE.forEach(a => {
+    if (a.id === id) found = a;
+    (a.items || []).forEach(b => { if (b.id === id) found = b; if (b.up && b.up.id === id) found = b.up; });
+  });
+  if (!found) return;
+  se.quals.push({ qid: id, name: found.name, amount: found.amount, start: thisYm(), lapse: '' });
+  closeSheet('qualpick');
+  renderQuals();
+  toast(found.name + ' を追加しました。下の「保存」を押すと決まります');
+}
+
+// ---------- 名簿の並べかえ ----------
+let ORD = [];
+function openOrder() {
+  ORD = staffList.filter(x => x.status !== '退職').map(x => x.id);
+  renderOrder();
+  openSheet('order');
+}
+function renderOrder() {
+  document.getElementById('orderList').innerHTML = ORD.map((id, i) => {
+    const x = staffList.find(y => y.id === id);
+    return '<div class="orow"><span class="n">' + (i + 1) + '</span><span class="name">' + esc(x.name) + '</span>' +
+      '<button onclick="moveOrder(' + i + ',-1)" ' + (i ? '' : 'disabled style="opacity:.3"') + '>↑</button>' +
+      '<button onclick="moveOrder(' + i + ',1)" ' + (i < ORD.length - 1 ? '' : 'disabled style="opacity:.3"') + '>↓</button></div>';
+  }).join('');
+}
+function moveOrder(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= ORD.length) return;
+  const t = ORD[i]; ORD[i] = ORD[j]; ORD[j] = t;
+  renderOrder();
+}
+function saveOrder() {
+  call('apiSaveOrder', [TOKEN, ORD], r => {
+    setStaff(r);
+    closeSheet('order');
+    renderStaffs();
+    toast('並び順を保存しました。表は1分ほどで作り直されます');
+  });
+}
+
+function savePersonTime(reset) {
+  const st = reset ? '' : document.getElementById('ptStart').value;
+  const en = reset ? '' : document.getElementById('ptEnd').value;
+  if (!reset && (!st || !en)) return toast('開始と終了の両方を入れてください');
+  call('apiSetPersonTime', [TOKEN, day, pt.frameId, pt.nick, st, en], r => {
+    data = setMonth(r);
+    closeSheet('ptime');
+    renderList();
+    const f = data.frames.find(x => x.id === pt.frameId);
+    if (f) showEditor(JSON.parse(JSON.stringify(f)));
+    toast((reset ? '現場の時間に戻しました' : pt.nick + 'さんの時間を保存しました') + notifiedText(r));
+  });
+}
+
+function selectedNicks() { return Array.prototype.map.call(document.querySelectorAll('#edPeople .person.sel'), b => b.dataset.nick); }
+function updateSave() { document.getElementById('edSave').textContent = '保存（' + selectedNicks().length + '人）'; }
+function renderNeed() { document.getElementById('edNeed').textContent = edit.need ? edit.need + '人' : '未設定'; }
+function stepNeed(n) { edit.need = Math.max(0, (edit.need || 0) + n); renderNeed(); }
+function clearTime() { document.getElementById('edStart').value = ''; document.getElementById('edEnd').value = ''; }
+
+function save() {
+  const st = document.getElementById('edStart').value;
+  const en = document.getElementById('edEnd').value;
+  if (!!st !== !!en) return toast('開始と終了の両方を入れてください（未定なら両方とも空欄）');
+  const f = { id: edit.id, key: day, site: edit.site, start: st, end: en, need: edit.need, memo: document.getElementById('edMemo').value, members: selectedNicks() };
+  call('apiSaveFrame', [TOKEN, f], r => {
+    if (r.copied) Object.keys(MONTHS).forEach(k => { if (k !== r.ym) delete MONTHS[k]; }); // 月をまたいで枠を作ったときは、ほかの月を読み直す
+    data = setMonth(r);
+    closeSheet('editor');
+    renderList();
+    toast((r.warn || '保存しました') + (r.copied ? '\n' + r.copied + 'の枠も作りました' : '') + notifiedText(r));
+  });
+}
+
+function removeFrame() {
+  ask('この現場のシフトを削除しますか？', '削除する', true).then(ok => {
+    if (!ok) return;
+    call('apiDeleteFrame', [TOKEN, day, edit.id], r => {
+      data = setMonth(r);
+      if (!r.warn) closeSheet('editor');
+      renderList();
+      toast((r.warn || '削除しました') + notifiedText(r));
+    });
+  });
+}
+
+/**
+ * 確認の表示（LINEの中のブラウザでは、ふつうの確認の小窓が出ないことがあるため、画面の中に出す）
+ * ok：「はい」側の文字、no：「いいえ」側の文字。danger：はい側を赤くする
+ */
+function ask(msg, ok, danger, no) {
+  return new Promise(resolve => {
+    const d = document.getElementById('dlg');
+    const yes = document.getElementById('dlgYes');
+    const cancel = document.getElementById('dlgNo');
+    document.getElementById('dlgMsg').textContent = msg;
+    yes.textContent = ok || 'OK';
+    cancel.textContent = no || 'やめる';
+    yes.className = danger ? 'danger' : '';
+    const close = v => { d.classList.remove('open'); resolve(v); };
+    yes.onclick = () => close(true);
+    cancel.onclick = () => close(false);
+    d.classList.add('open');
+  });
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+if (FIRST) {
+  data = setMonth(FIRST);
+  renderHeader();
+  renderList();
+  prefetch(day);
+} else {
+  load(day);
+}
+</script>
+</body>
+</html>

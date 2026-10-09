@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="robots" content="noindex">
+<title>希望を出す</title>
+<style>
+  :root {
+    color-scheme: dark;
+    /* Enforcer のホームページに合わせた、黒が基調の色 */
+    --bg: #0B0B10; --card: #17171F; --ink: #F2F2F5; --sub: #9A9AA8; --line: #2C2C38; --input: #101017;
+    --brand: linear-gradient(100deg, #090738 0%, #211718 100%);
+    --blue: #2F86E0; --blue-bg: #13253B; --sat: #6CB2FF;
+    --green: #3DD68C; --green-bg: #0F2E20; --yellow: #F2C14E; --yellow-bg: #332A10;
+    --red: #FF6B6B; --red-bg: #3A1619; --gray-bg: #24242E;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  input, textarea, select { background: var(--input); color: var(--ink); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--brand); border-bottom: 1px solid var(--line); padding: 10px 12px; }
+  .nav { display: flex; align-items: center; justify-content: space-between; }
+  .nav button { width: 48px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.1); font-size: 22px; }
+  .nav button:disabled { opacity: .3; }
+  .nav b { font-size: 21px; }
+  .who { text-align: center; font-size: 14px; color: #C9C9D6; margin-top: 2px; }
+  .pick { width: 100%; height: 44px; margin-top: 6px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; background: var(--input); color: var(--ink); }
+  .status { margin-top: 8px; border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 700; }
+  .status.open { background: var(--blue-bg); color: var(--blue); }
+  .status.done { background: var(--green-bg); color: var(--green); }
+  .status.late { background: var(--yellow-bg); color: var(--yellow); }
+  main { padding: 12px 12px 120px; }
+  .box { background: var(--card); border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+  .box h3 { margin: 0 0 8px; font-size: 15px; color: var(--sub); }
+  .quick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick button { height: 40px; padding: 0 12px; border-radius: 10px; background: var(--gray-bg); font-size: 14px; font-weight: 700; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal .wd { text-align: center; font-size: 12px; color: var(--sub); }
+  .cal .d { min-height: 62px; border-radius: 10px; background: var(--gray-bg); display: flex; flex-direction: column; align-items: center; padding-top: 4px; font-weight: 700; }
+  .cal .d small { font-size: 11px; font-weight: 700; margin-top: 2px; padding: 1px 4px; border-radius: 6px; line-height: 1.2; }
+  .cal .d.sat { color: var(--sat); } .cal .d.sun { color: var(--red); }
+  .cal .d.lock { opacity: .55; }
+  .cal .d .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); margin-top: 3px; }
+  .t-ok { background: var(--green-bg); color: var(--green); }
+  .t-part { background: var(--yellow-bg); color: var(--yellow); }
+  .t-no { background: var(--red-bg); color: var(--red); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; margin-top: 8px; }
+  .legend span { padding: 2px 8px; border-radius: 8px; font-weight: 700; }
+  textarea { width: 100%; min-height: 80px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+  .foot { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px; background: var(--card); border-top: 1px solid var(--line); }
+  .foot .dirty { font-size: 13px; color: var(--red); text-align: center; margin-bottom: 6px; display: none; }
+  .foot button { width: 100%; height: 58px; border-radius: 16px; background: var(--blue); color: #fff; font-size: 19px; font-weight: 700; }
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: flex-end; z-index: 20; }
+  .sheet.open { display: flex; }
+  .panel { background: var(--card); width: 100%; border-radius: 20px 20px 0 0; padding: 16px 14px 20px; }
+  .panel h2 { margin: 0 0 10px; font-size: 20px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt { min-height: 54px; border-radius: 14px; background: var(--gray-bg); font-weight: 700; font-size: 16px; }
+  .opt.on { outline: 3px solid var(--blue); background: var(--blue-bg); }
+  .times { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .times input { flex: 1; height: 48px; font-size: 18px; border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; }
+  .memo-in { width: 100%; height: 48px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; margin-top: 10px; }
+  .row { display: flex; gap: 8px; margin-top: 12px; }
+  .row button { flex: 1; height: 52px; border-radius: 14px; font-weight: 700; }
+  .row .cancel { background: var(--gray-bg); }
+  .row .ok { background: var(--blue); color: #fff; }
+  .note { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  #toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); background: #2A2A36; border: 1px solid var(--line); color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 15px; z-index: 30; display: none; white-space: pre-line; max-width: 90%; }
+  #loading { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.6); display: none; place-items: center; font-weight: 700; color: var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <div class="nav"><button id="prev" onclick="moveMonth(-1)">‹</button><b id="title"></b><button id="next" onclick="moveMonth(1)">›</button></div>
+  <div class="who" id="who"></div>
+  <select class="pick" id="pick" onchange="pickPerson(this.value)" style="display:none"></select>
+  <div class="status" id="status"></div>
+</header>
+<main>
+  <div class="box">
+    <h3 id="howto"></h3>
+    <div class="quick" id="quick"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="box"><div class="cal" id="cal"></div></div>
+  <div class="box">
+    <h3>今月の特記事項（自由に書けます）</h3>
+    <textarea id="note" placeholder="例：10/15〜18は帰省します。" oninput="markDirty()"></textarea>
+  </div>
+</main>
+<div class="foot"><div class="dirty" id="dirty">まだ送っていない変更があります</div><button id="submit" onclick="submitWish()"></button></div>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closePanel()">
+  <div class="panel">
+    <h2 id="pTitle"></h2>
+    <div class="opts" id="pOpts"></div>
+    <div class="times" id="pTimes"><input type="time" id="pFrom"> 〜 <input type="time" id="pTo"></div>
+    <input class="memo-in" id="pMemo" placeholder="この日のメモ（例：午後から、学校のため）">
+    <div class="note" id="pNote">時間の指定：「13:00〜」だけ、「〜16:00」だけでもOKです</div>
+    <div class="row"><button class="cancel" onclick="closePanel()">やめる</button><button class="ok" onclick="savePanel()">決定</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="loading">読み込み中…</div>
+
+<script>
+// GitHub Pages 用：google.script.run と同じ書き方で、Apps Script（リンクの a= の場所）を呼ぶ
+(function () {
+  var q = new URLSearchParams(location.search);
+  var API = q.get('a') || '';
+  var okUrl = /^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[\w-]+\/exec$/.test(API);
+  var loaded = false;
+  function stop(msg) {
+    document.body.innerHTML = '<p style="font-size:18px;padding:24px;line-height:1.6;color:#F2F2F5">' + msg + '</p>';
+  }
+  function run() {
+    var s = null, f = null;
+    var p = new Proxy({}, { get: function (_, k) {
+      if (k === 'withSuccessHandler') return function (h) { s = h; return p; };
+      if (k === 'withFailureHandler') return function (h) { f = h; return p; };
+      return function () {
+        var args = Array.prototype.slice.call(arguments);
+        var fail = function (msg) {
+          if (!loaded && /期限|正しく/.test(msg)) return stop(msg); // 最初から開けないときは、画面に大きく出す
+          if (f) f(new Error(msg));
+        };
+        if (!okUrl) return fail('リンクが正しくありません。LINEでもう一度ボタンを押してください。');
+        fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: k, args: args }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (j.ok) { loaded = true; if (s) s(j.r); } else fail(j.error); })
+          .catch(function () { fail('通信できませんでした。電波のよい所で、もう一度お試しください。'); });
+      };
+    } });
+    return p;
+  }
+  window.google = { script: { get run() { return run(); } } };
+})();
+</script>
+<script>
+const TOKEN = (new URLSearchParams(location.search).get('t') || '');
+const FIRST = null;
+let D = null, W = {}, locked = {}, cur = null, sel = null, dirty = false;
+const TYPES = {
+  arb: [['ok', '◯ 終日OK'], ['night', '夜勤のみ'], ['time', '時間の指定'], ['no', '休み'], ['clear', '希望なし（消す）']],
+  emp: [['no', '休み'], ['time', '時間の指定'], ['clear', '出勤可（消す）']],
+};
+const WD = '日月火水木金土';
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(window._t); window._t = setTimeout(() => (t.style.display = 'none'), 3000); }
+function busy(on) { document.getElementById('loading').style.display = on ? 'grid' : 'none'; }
+function call(fn, args, done) {
+  busy(true);
+  google.script.run.withSuccessHandler(r => { busy(false); done(r); }).withFailureHandler(e => { busy(false); toast((e && e.message) || String(e)); })[fn].apply(null, args);
+}
+function Y() { return Number(D.ym.slice(0, 4)); }
+function M() { return Number(D.ym.slice(5, 7)); }
+function days() { return new Date(Y(), M(), 0).getDate(); }
+function wd(d) { return new Date(Y(), M() - 1, d).getDay(); }
+function key(d) { return D.ym + '/' + ('0' + d).slice(-2); }
+function isOff(d) { return wd(d) === 0 || wd(d) === 6 || D.holidays.indexOf(key(d)) >= 0; }
+function emp() { return D.target.style === '休みの日を出す'; }
+/** 締切後の本人は、出した希望を変えられない（社長は別） */
+function late() { return D.afterDue && !D.isAdmin; }
+function md(k) { const p = k.split('/'); return Number(p[1]) + '/' + Number(p[2]); }
+
+function setData(r) {
+  D = r;
+  W = JSON.parse(JSON.stringify(r.wishes || {}));
+  locked = {};
+  if (late()) Object.keys(W).forEach(d => (locked[d] = true));
+  document.getElementById('note').value = r.note || '';
+  dirty = false;
+  render();
+}
+function markDirty() { dirty = true; document.getElementById('dirty').style.display = 'block'; }
+
+function render() {
+  document.getElementById('title').textContent = Y() + '年' + M() + '月の希望';
+  const now = new Date(), first = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2);
+  const lastD = new Date(now.getFullYear(), now.getMonth() + 2, 1);
+  document.getElementById('prev').disabled = D.ym <= first;
+  document.getElementById('next').disabled = D.ym >= lastD.getFullYear() + '/' + ('0' + (lastD.getMonth() + 1)).slice(-2);
+  document.getElementById('who').textContent = D.target.name + 'さん（' + (emp() ? '休みの日を出す' : '出られる日を出す') + '）';
+  const pick = document.getElementById('pick');
+  if (D.isAdmin) {
+    pick.style.display = '';
+    pick.innerHTML = D.people.map(p => '<option value="' + esc(p.nick) + '"' + (p.nick === D.target.nick ? ' selected' : '') + '>' +
+      esc(p.name) + (p.need === '必要' ? (p.done ? '（提出済み）' : '（まだ）') : '（提出不要）') + '</option>').join('');
+  }
+  const s = document.getElementById('status');
+  if (late()) {
+    s.className = 'status late';
+    s.textContent = '締切（' + md(D.due) + '）を過ぎました。まだ希望のない日を「追加」だけできます。出した希望を変えるときは社長に連絡してください。';
+  } else if (D.submittedAt) {
+    s.className = 'status done';
+    s.textContent = '提出済み（' + D.submittedAt.slice(5) + '）。' + (D.afterDue ? '社長として直せます。' : '締切の' + md(D.due) + 'までは何度でも直せます。');
+  } else {
+    const left = Math.ceil((new Date(D.due.replace(/\//g, '-') + 'T23:59:59') - now) / 86400000);
+    s.className = D.afterDue ? 'status late' : 'status open';
+    s.textContent = D.afterDue ? '締切（' + D.dueLabel + '）を過ぎていて、まだ提出していません。社長として入力できます。'
+      : '締切：' + D.dueLabel + 'まで' + (left >= 0 ? '　あと' + left + '日' : '') + '　まだ提出していません';
+  }
+  document.getElementById('howto').textContent = emp()
+    ? '休みたい日をタップしてください（何も付けない日は「出勤できる」扱いです）'
+    : '出られる日をタップしてください（何も付けない日は「希望なし」です）';
+  const q = emp() ? [['土日祝を休みに', 'offNo'], ['全部消す', 'clear']] : [['平日を全部◯', 'wdOk'], ['土日祝を全部◯', 'offOk'], ['全部消す', 'clear']];
+  document.getElementById('quick').innerHTML = late() ? '<span class="note">締切後は、まとめての入力はできません</span>'
+    : q.map(x => '<button onclick="quick(\'' + x[1] + '\')">' + x[0] + '</button>').join('');
+  document.getElementById('legend').innerHTML = emp()
+    ? '<span class="t-no">休 ＝ 休み希望</span><span class="t-part">13- ＝ 時間の指定</span>'
+    : '<span class="t-ok">◯ 終日OK</span><span class="t-part">夜勤／-16 ＝ 条件つき</span><span class="t-no">休 ＝ 休み</span>';
+  let h = ['月', '火', '水', '木', '金', '土', '日'].map(w => '<div class="wd">' + w + '</div>').join('');
+  for (let i = 0; i < (wd(1) + 6) % 7; i++) h += '<div></div>';
+  for (let d = 1; d <= days(); d++) {
+    const w = W[d];
+    let tag = '';
+    if (w) {
+      if (w.t === 'time') tag = '<small class="t-part">' + (w.from ? w.from.replace(':00', '') : '') + '-' + (w.to ? w.to.replace(':00', '') : '') + '</small>';
+      else tag = '<small class="' + { ok: 't-ok', night: 't-part', no: 't-no' }[w.t] + '">' + { ok: '◯', night: '夜勤', no: '休' }[w.t] + '</small>';
+      if (w.memo) tag += '<span class="dot"></span>';
+    }
+    const cls = (wd(d) === 0 || D.holidays.indexOf(key(d)) >= 0) ? 'sun' : wd(d) === 6 ? 'sat' : '';
+    h += '<button class="d ' + cls + (locked[d] ? ' lock' : '') + '" onclick="openPanel(' + d + ')">' + d + tag + '</button>';
+  }
+  document.getElementById('cal').innerHTML = h;
+  document.getElementById('submit').textContent = late() ? '追加した希望を送る' : D.submittedAt ? '直した内容で提出し直す' : '希望を提出する';
+  document.getElementById('dirty').style.display = dirty ? 'block' : 'none';
+}
+
+function quick(k) {
+  for (let d = 1; d <= days(); d++) {
+    if (k === 'clear') delete W[d];
+    if (k === 'wdOk' && !isOff(d)) W[d] = { t: 'ok' };
+    if (k === 'offOk' && isOff(d)) W[d] = { t: 'ok' };
+    if (k === 'offNo' && isOff(d)) W[d] = { t: 'no' };
+  }
+  dirty = true;
+  render();
+}
+function openPanel(d) {
+  if (locked[d]) return toast('締切後は、出した希望を変えられません。\n変えたいときは社長に連絡してください。');
+  cur = d;
+  const w = W[d] || {};
+  sel = w.t || null;
+  document.getElementById('pTitle').textContent = M() + '/' + d + '（' + WD.charAt(wd(d)) + '）の希望';
+  document.getElementById('pFrom').value = w.from ? ('0' + w.from).slice(-5) : '';
+  document.getElementById('pTo').value = w.to ? ('0' + w.to).slice(-5) : '';
+  document.getElementById('pMemo').value = w.memo || '';
+  renderOpts();
+  document.getElementById('sheet').classList.add('open');
+}
+function renderOpts() {
+  document.getElementById('pOpts').innerHTML = TYPES[emp() ? 'emp' : 'arb'].map(o => '<button class="opt' + (sel === o[0] ? ' on' : '') + '" onclick="sel=\'' + o[0] + '\';renderOpts()">' + o[1] + '</button>').join('');
+  document.getElementById('pTimes').style.display = sel === 'time' ? '' : 'none';
+}
+function closePanel() { document.getElementById('sheet').classList.remove('open'); }
+function savePanel() {
+  const from = document.getElementById('pFrom').value, to = document.getElementById('pTo').value;
+  if (sel === 'time' && !from && !to) return toast('時間を入れてください（開始か終了のどちらかだけでもOK）');
+  if (!sel || sel === 'clear') delete W[cur];
+  else W[cur] = { t: sel, from: sel === 'time' ? from : '', to: sel === 'time' ? to : '', memo: document.getElementById('pMemo').value.trim() };
+  dirty = true;
+  closePanel();
+  render();
+}
+function submitWish() {
+  call('apiWishSave', [TOKEN, D.ym, D.target.nick, W, document.getElementById('note').value], r => {
+    setData(r);
+    toast(r.warn || (M() + '月の希望を送りました。' + (late() ? '' : '\n締切（' + md(D.due) + '）までは何度でも直せます。')));
+  });
+}
+function load(ym, nick) {
+  call('apiWishLoad', [TOKEN, ym, nick || ''], setData);
+}
+function moveMonth(n) {
+  if (dirty && !confirmLeave()) return;
+  const d = new Date(Y(), M() - 1 + n, 1);
+  load(d.getFullYear() + '/' + ('0' + (d.getMonth() + 1)).slice(-2), D.isAdmin ? D.target.nick : '');
+}
+function pickPerson(nick) {
+  if (dirty && !confirmLeave()) { document.getElementById('pick').value = D.target.nick; return; }
+  load(D.ym, nick);
+}
+/** 送っていない変更があるときは、先に送るよう知らせて止める */
+function confirmLeave() {
+  toast('まだ送っていない変更があります。\n先に下のボタンで送ってください。');
+  return false;
+}
+
+if (FIRST) setData(FIRST);
+else load('', ''); // GitHub Pages から開いたときは、ここで読みに行く
+</script>
+</body>
+</html>
