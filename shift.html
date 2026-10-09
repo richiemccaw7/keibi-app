@@ -46,6 +46,11 @@
   .foot .back { height: 58px; padding: 0 18px; border-radius: 16px; background: var(--gray-bg); font-weight: 700; }
   .foot .save:disabled { opacity: .4; }
   .tile.on { outline: 4px solid var(--ink); outline-offset: -4px; }
+  .cell { display: inline-block; padding: 2px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); font-weight: 700; }
+  .palette { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .palette button { width: 38px; height: 38px; border-radius: 10px; border: 2px solid rgba(255,255,255,.2); }
+  .palette button.on { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .preview { margin-top: 10px; font-size: 14px; color: var(--sub); }
   .guard { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 8px; background: #3A2A10; color: #F2C14E; margin-left: 6px; vertical-align: 2px; }
   .qrow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
   .qrow:first-child { border-top: 0; }
@@ -202,7 +207,7 @@
         <div class="box"><h3>正式名（なくてもOK）</h3><input class="memo" id="nsFull" placeholder="例：羽田空港 第3ターミナル 入国" oninput="A.nw.full=this.value">
           <div class="hint">前日の連絡など、LINEのお知らせに出る名前です。空なら略称を使います</div></div>
         <div class="box"><h3>受託元</h3><div class="opts" id="nsPrime"></div></div>
-        <div class="box" id="nsClientBox"><h3>クライアント（Enfのとき）</h3><div class="opts" id="nsClient"></div></div>
+        <div class="box" id="nsClientBox"><h3>クライアント</h3><div class="opts" id="nsClient"></div></div>
         <div class="box"><h3>種類</h3><div class="opts" id="nsKind"></div></div>
         <div class="box" id="nsTimeBox">
           <h3>所定の時間（平日）</h3>
@@ -211,7 +216,9 @@
           <div class="times"><input type="time" id="nsHStart" onchange="A.nw.hStart=this.value"> 〜 <input type="time" id="nsHEnd" onchange="A.nw.hEnd=this.value"></div>
           <div class="hint">土日祝が平日と同じなら空欄のままでOK</div>
         </div>
-        <div class="box"><h3>色</h3><div class="opts" id="nsColor"></div></div>
+        <div class="box"><h3>色</h3><div id="nsColor"></div></div>
+        <div class="box" id="nsKeepBox"><label style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="nsKeep" style="width:24px;height:24px" onchange="A.nw.keep=this.checked"> 今後もこの現場を一覧に残す</label>
+          <div class="hint">チェックしないと、枠を作ったあと「消した現場」に入ります（現場を選ぶ一覧に出なくなり、すっきりします）。同じ現場をまた使うときは、検索すると出てきます</div></div>
         <button class="newsite" style="border-style:solid;border-color:var(--line);color:var(--sub)" onclick="A.isNew=false;renderAdd()">← 今ある現場から選ぶ</button>
       </div>
     </div>
@@ -322,7 +329,7 @@
       <div class="times"><input type="time" id="sdHStart"> 〜 <input type="time" id="sdHEnd"></div>
       <div class="hint">変えた時間は、これから作る枠から使います（もう作ってある枠の時間は変わりません）</div>
     </div>
-    <div class="box"><h3>色</h3><div class="opts" id="sdColor"></div></div>
+    <div class="box"><h3>色</h3><div id="sdColor"></div></div>
   </div>
   <div class="foot"><button class="save" onclick="saveSite()">保存</button></div>
 </div>
@@ -509,7 +516,7 @@ function dayData(key) {
   const m = MONTHS[key.slice(0, 7)];
   const off = isOff(key);
   return {
-    key: key, isAdmin: m.isAdmin, canEdit: m.canEdit, canProxy: m.canProxy, holidays: m.holidays,
+    key: key, isAdmin: m.isAdmin, canEdit: m.canEdit, canProxy: m.canProxy, holidays: m.holidays, primeStyle: m.primeStyle,
     sites: m.sites.map(s => Object.assign({}, s, off && s.hStart ? { start: s.hStart, end: s.hEnd } : {})), // 土日祝は土日祝の時間
     frames: m.frames.filter(f => f.key === key),
     people: m.people.map(p => Object.assign({}, p, { wish: m.wishes[p.nick + '|' + key] || null })),
@@ -554,7 +561,27 @@ function textColor(hex) {
 function timeText(f) { return f.start ? f.start + '〜' + (f.end || '') : '時間未定'; }
 const OWN = 'Enf'; // 自社の呼び名（受託元としての名前）
 /** まとまりの名前。Enfはクライアントごとに分ける（例：Enf ／ WMJ） */
-function groupOf(s) { return s.prime === OWN && s.client ? OWN + ' ／ ' + s.client : s.prime; }
+function groupOf(s) { return s.prime === OWN && s.client ? OWN + ' ／ ' + s.client : s.prime === NO_PRIME ? 'その他' : s.prime; }
+const NO_PRIME = 'その他';
+/** 現場のマスの色（見る用の表と同じ。背景と文字の色） */
+function cellStyle(s) { return 'background:' + esc(s.color) + ';color:' + esc(s.textColor || textColor(s.color)); }
+function primeStyleOf(p) { return ((data && data.primeStyle) || {})[p] || { bg: '#607D8B', fg: '#FFFFFF' }; }
+const BG_COLORS = ['#000000', '#FFFFFF', '#FF00FF', '#0000FF', '#FF0000', '#00FFFF', '#FFFF00', '#00FF00', '#9900FF', '#E06666', '#B45F06', '#7F6000', '#B7B7B7', '#434343', '#274E13', '#0C343D', '#A64D79'];
+const FG_COLORS = ['#FFFFFF', '#000000', '#FF00FF', '#FF0000', '#0000FF'];
+/**
+ * 色を選ぶ部品。o：{ mode: 'prime' | 'own', bg, fg }。受託元の色を使うか、背景と文字の色を選ぶか
+ * prime：受託元の色 {bg, fg}。im：IM案件（いつも赤）
+ */
+function colorPicker(id, o, prime, im, redraw) {
+  const el = document.getElementById(id);
+  if (im) { el.innerHTML = '<span class="cell" style="background:#FF0000;color:#000000">IM案件</span><div class="hint">IM案件は、いつも赤です</div>'; return; }
+  const sw = (list, cur, key) => '<div class="palette">' + list.map(c => '<button class="' + (c === cur ? 'on' : '') + '" style="background:' + c + '" onclick="' + redraw + '.' + key + '=\'' + c + '\';' + redraw.split('.')[0] + 'Color()" aria-label="' + c + '"></button>').join('') + '</div>';
+  const bg = o.mode === 'own' ? o.bg : prime.bg, fg = o.mode === 'own' ? o.fg : prime.fg;
+  el.innerHTML = '<div class="opts"><button class="opt' + (o.mode !== 'own' ? ' on' : '') + '" onclick="' + redraw + '.mode=\'prime\';' + redraw.split('.')[0] + 'Color()">受託元の色</button>' +
+    '<button class="opt' + (o.mode === 'own' ? ' on' : '') + '" onclick="' + redraw + '.mode=\'own\';' + redraw.split('.')[0] + 'Color()">色を選ぶ</button></div>' +
+    (o.mode === 'own' ? '<h3 style="margin-top:12px">マスの色</h3>' + sw(BG_COLORS, o.bg, 'bg') + '<h3 style="margin-top:12px">文字の色</h3>' + sw(FG_COLORS, o.fg, 'fg') : '') +
+    '<div class="preview">見る用の表では：<span class="cell" style="background:' + bg + ';color:' + fg + '">' + esc(o.label || '現場名') + '</span></div>';
+}
 /** まとまりの並び順：今のシフト表と同じく、Enf → CREST → ESRR … の順 */
 function primeOrder() {
   const o = [];
@@ -581,8 +608,8 @@ function renderList() {
       const s = siteOf(f.site);
       const n = f.members.length;
       const count = f.need ? '<div class="count' + (n < f.need ? ' short' : '') + '">' + n + '/' + f.need + '人</div>' : '';
-      h += '<button class="card" onclick="openEditor(\'' + f.id + '\')"><div class="bar" style="background:' + esc(s.color) + '"></div><div class="body">' +
-        '<div class="title">' + esc(s.code) + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
+      h += '<button class="card" onclick="openEditor(\'' + f.id + '\')"><div class="bar" style="background:' + esc(['#FFFFFF', '#000000'].indexOf(String(s.color).toUpperCase()) >= 0 ? s.textColor : s.color) + '"></div><div class="body">' +
+        '<div class="title"><span class="cell" style="' + cellStyle(s) + '">' + esc(s.code) + '</span>' + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
         '<div class="chips">' + (n ? f.members.map(m => '<span class="chip">' + esc(m.nick) + (m.own ? '<span style="color:var(--red)"> ' + esc(m.start + '〜' + m.end) + '</span>' : '') + '</span>').join('') : '<span class="chip" style="color:var(--red)">まだ誰もいません</span>') + '</div>' +
         '</div>' + count + '</button>';
     });
@@ -604,11 +631,13 @@ function openSheet(id) {
   el.classList.add('open');
 }
 function openAdd() {
-  A = { step: 1, code: '', isNew: false, nw: { guard: '', code: '', full: '', prime: OWN, client: '', kind: '臨時案件', color: COLORS[0], start: '', end: '', hStart: '', hEnd: '' },
+  A = { step: 1, code: '', isNew: false, nw: { guard: '', code: '', full: '', prime: OWN, client: '', kind: '臨時案件', keep: false, start: '', end: '', hStart: '', hEnd: '' },
+    nc: { mode: 'prime', bg: '#0000FF', fg: '#FFFFFF' },
     useStd: true, need: 1, ym: day.slice(0, 7), picked: {} };
   A.picked[day] = true;
   document.getElementById('adSearch').value = '';
   ['nsCode', 'nsFull', 'nsStart', 'nsEnd', 'nsHStart', 'nsHEnd', 'adStart', 'adEnd', 'adMemo'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('nsKeep').checked = false;
   renderAdd();
   document.getElementById('add').classList.add('open');
 }
@@ -616,7 +645,8 @@ function openAdd() {
 function adSite() {
   if (!A.isNew) return siteOf(A.code);
   const n = A.nw;
-  return { code: n.code.trim(), name: n.full.trim() || n.code.trim(), kind: n.kind, color: n.color, start: n.start, end: n.end, hStart: n.hStart, hEnd: n.hEnd };
+  const ps = primeStyleOf(n.prime);
+  return { code: n.code.trim(), name: n.full.trim() || n.code.trim(), kind: n.kind, color: A.nc.mode === 'own' ? A.nc.bg : ps.bg, textColor: A.nc.mode === 'own' ? A.nc.fg : ps.fg, start: n.start, end: n.end, hStart: n.hStart, hEnd: n.hEnd };
 }
 function renderAdd() {
   const names = ['現場', '時間と人数', '日にち'];
@@ -656,18 +686,24 @@ function renderAdList() {
   const q = document.getElementById('adSearch').value.trim().toLowerCase();
   const todayKey = toKey(new Date());
   // 常駐はいつも出す。その日（期間）だけの現場は、終わっていないものだけ。検索したときは全部から
-  const hit = s => !s.deleted && (q ? (s.code + ' ' + s.name).toLowerCase().indexOf(q) >= 0 : (!s.day || (s.dayEnd || s.day) >= todayKey));
+  const found = s => (s.code + ' ' + s.name).toLowerCase().indexOf(q) >= 0;
+  const hit = s => !s.deleted && (q ? found(s) : (!s.day || (s.dayEnd || s.day) >= todayKey));
   let h = '';
   primeOrder().forEach(p => {
     const list = data.sites.filter(s => groupOf(s) === p && hit(s));
     if (!list.length) return;
     h += '<div class="group">' + esc(p) + '</div><div class="tiles">';
     list.forEach(s => {
-      h += '<button class="tile' + (s.code === A.code ? ' on' : '') + '" style="background:' + esc(s.color) + ';color:' + textColor(s.color) + '" onclick="pickAdSite(\'' + esc(s.code) + '\')">' +
+      h += '<button class="tile' + (s.code === A.code ? ' on' : '') + '" style="' + cellStyle(s) + '" onclick="pickAdSite(\'' + esc(s.code) + '\')">' +
         esc(s.code) + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + (s.kind === '常駐' ? (s.start ? esc(s.start + '〜' + s.end) : '常駐') : s.day ? esc(md(s.day) + (s.dayEnd ? '〜' + md(s.dayEnd) : '')) : esc(s.kind)) + '</small></button>';
     });
     h += '</div>';
   });
+  // 検索したときは、一覧から外した現場（消した現場）も出す。選ぶと、外したまま枠だけ作る
+  const gone = q ? data.sites.filter(s => s.deleted && found(s)) : [];
+  if (gone.length) {
+    h += '<div class="group">一覧から外した現場</div><div class="tiles">' + gone.map(s => '<button class="tile" style="' + cellStyle(s) + ';opacity:.8" onclick="pickAdSite(\'' + esc(s.code) + '\')">' + esc(s.code) + '<small>' + esc(s.kind) + '</small></button>').join('') + '</div>';
+  }
   document.getElementById('adList').innerHTML = h || '<div class="empty">見つかりません。<br>下の「＋ 新しい現場を作る」から作ってください。</div>';
 }
 function pickAdSite(code) {
@@ -687,19 +723,30 @@ function startNewSite() {
 function renderNewSite() {
   const n = A.nw;
   const primes = PRIMES.slice();
-  data.sites.forEach(s => { if (primes.indexOf(s.prime) < 0) primes.push(s.prime); });
+  data.sites.forEach(s => { if (primes.indexOf(s.prime) < 0 && s.prime !== NO_PRIME) primes.push(s.prime); });
+  primes.push(NO_PRIME);
+  if (n.kind === 'IM案件' && n.prime !== 'ESRR') n.kind = '臨時案件'; // IM案件はESRRだけ
   const clients = CLIENTS.slice();
   data.sites.forEach(s => { if (s.client && clients.indexOf(s.client) < 0) clients.push(s.client); });
   const chips = (id, list, cur, key) => {
     document.getElementById(id).innerHTML = list.map(v => '<button class="opt' + (v[0] === cur ? ' on' : '') + '" onclick="A.nw.' + key + '=\'' + esc(v[0]) + '\';renderNewSite()">' + esc(v[1]) + '</button>').join('');
   };
   chips('nsGuard', [['身辺', '身辺'], ['その他', 'その他']], n.guard, 'guard');
-  chips('nsPrime', primes.map(p => [p, p]), n.prime, 'prime');
+  // 受託元のボタンは、その受託元の色（見る用の表と同じ）
+  document.getElementById('nsPrime').innerHTML = primes.map(p => {
+    const st = primeStyleOf(p);
+    return '<button class="opt" style="background:' + st.bg + ';color:' + st.fg + ';' + (p === n.prime ? 'outline:3px solid var(--blue);outline-offset:2px' : 'opacity:.85') + '" onclick="A.nw.prime=\'' + esc(p) + '\';renderNewSite()">' + esc(p) + '</button>';
+  }).join('') + (n.prime === NO_PRIME ? '<div class="hint" style="width:100%">「その他」の案件は、見る用の表では、その人の行にだけ出ます</div>' : '');
   document.getElementById('nsClientBox').style.display = n.prime === OWN ? '' : 'none';
   chips('nsClient', clients.map(c => [c, c]), n.client, 'client');
-  chips('nsKind', [['臨時案件', '臨時'], ['IM案件', 'IM案件'], ['常駐', '常駐（毎日使う）']], n.kind, 'kind');
+  chips('nsKind', [['臨時案件', '臨時']].concat(n.prime === 'ESRR' ? [['IM案件', 'IM案件']] : []).concat([['常駐', '常駐（見る用の表に常に表示）']]), n.kind, 'kind');
   document.getElementById('nsTimeBox').style.display = n.kind === '常駐' ? '' : 'none';
-  document.getElementById('nsColor').innerHTML = COLORS.map(c => '<button class="swatch' + (c === n.color ? ' on' : '') + '" style="background:' + c + '" onclick="A.nw.color=\'' + c + '\';renderNewSite()" aria-label="色"></button>').join('');
+  document.getElementById('nsKeepBox').style.display = n.kind === '常駐' ? 'none' : '';
+  AColor();
+}
+function AColor() {
+  A.nc.label = A.nw.code.trim() || '現場名';
+  colorPicker('nsColor', A.nc, primeStyleOf(A.nw.prime), A.nw.kind === 'IM案件', 'A.nc');
 }
 function adNeed(n) { A.need = Math.max(1, A.need + n); document.getElementById('adNeedV').textContent = A.need + '人'; }
 function adBackStep() { A.step--; renderAdd(); }
@@ -711,6 +758,7 @@ function adNext() {
     const same = data.sites.find(s => s.code === code);
     if (same) return toast('略称「' + code + '」はもう使われています' + (same.deleted ? '（消した現場です。現場の管理から元に戻せます）' : '。今ある現場から選んでください'));
     if (n.prime === OWN && !n.client) return toast('クライアントを選んでください');
+    if (A.nc.mode === 'own' && A.nc.bg === A.nc.fg) return toast('マスの色と文字の色が同じだと、文字が見えません');
     if (n.kind === '常駐' && (!!n.start !== !!n.end || !!n.hStart !== !!n.hEnd)) return toast('所定の時間は、開始と終了の両方を入れてください');
     A.useStd = true;
     A.step = 2;
@@ -784,12 +832,13 @@ function makeFrames() {
     start: fixed ? '' : document.getElementById('adStart').value, end: fixed ? '' : document.getElementById('adEnd').value,
     view: one ? keys[0] : day, // 1日だけなら、その日を開いて人を選べるようにする
   };
-  if (A.isNew) p.site = { guard: A.nw.guard === '身辺', code: A.nw.code.trim(), full: A.nw.full.trim(), prime: A.nw.prime, client: A.nw.prime === OWN ? A.nw.client : '', kind: A.nw.kind, color: A.nw.color, start: A.nw.start, end: A.nw.end, hStart: A.nw.hStart, hEnd: A.nw.hEnd };
+  if (A.isNew) p.site = { guard: A.nw.guard === '身辺', code: A.nw.code.trim(), full: A.nw.full.trim(), prime: A.nw.prime, client: A.nw.prime === OWN ? A.nw.client : '', kind: A.nw.kind,
+    color: A.nc.mode === 'own' ? A.nc.bg : '', textColor: A.nc.mode === 'own' ? A.nc.fg : '', keep: A.nw.kind === '常駐' || A.nw.keep, start: A.nw.start, end: A.nw.end, hStart: A.nw.hStart, hEnd: A.nw.hEnd };
   else p.code = A.code;
   // 新しい現場は、保存の前に「身辺」か「その他」かをもう一度確かめる（まちがい防止）
   if (A.isNew) {
     const g = A.nw.guard;
-    return ask('「' + p.site.code + '」を「' + g + '」の現場として追加します。\nよろしいですか？', g + 'を追加').then(ok => { if (ok) sendMake(p); });
+    return ask('「' + p.site.code + '」を「' + g + '」の現場として追加します。' + (p.site.keep ? '' : '\n（一覧には残さず、作ったあと「消した現場」に入れます）') + '\nよろしいですか？', g + 'を追加').then(ok => { if (ok) sendMake(p); });
   }
   sendMake(p);
 }
@@ -1021,7 +1070,7 @@ function openSites() {
 function renderSites() {
   const live = data.sites.filter(s => !s.deleted && (!s.day || (s.dayEnd || s.day) >= toKey(new Date())));
   const gone = data.sites.filter(s => s.deleted);
-  const row = (s, btn) => '<div class="site-row" style="flex-wrap:wrap"><span class="dot" style="background:' + esc(s.color) + '"></span><span class="who"><div class="name">' + esc(s.code) + '</div><div class="sub">' +
+  const row = (s, btn) => '<div class="site-row" style="flex-wrap:wrap"><span class="who"><div class="name"><span class="cell" style="' + cellStyle(s) + '">' + esc(s.code) + '</span></div><div class="sub">' +
     esc((s.guard ? '身辺・' : '') + (s.name !== s.code ? s.name + '　' : '') + s.kind + (s.start ? '　' + s.start + '〜' + s.end : '') + (s.day ? '　' + md(s.day) + (s.dayEnd ? '〜' + md(s.dayEnd) : '') : '')) + '</div></span>' +
     '<span style="display:flex;gap:6px">' + btn + '</span></div>';
   const btns = s => (data.isAdmin ? '<button class="mini" style="background:var(--gray-bg);color:var(--ink)" onclick="openSiteEdit(\'' + esc(s.code) + '\')">直す</button>' : '') +
@@ -1061,7 +1110,8 @@ function restoreSite(code) {
 let sd = null;
 function openSiteEdit(code) {
   const s = siteOf(code);
-  sd = { code: code, color: s.color, resident: s.kind === '常駐', guard: s.guard ? '身辺' : 'その他' };
+  sd = { code: code, resident: s.kind === '常駐', guard: s.guard ? '身辺' : 'その他', im: s.kind === 'IM案件', prime: s.prime,
+    c: { mode: s.ownColor ? 'own' : 'prime', bg: s.ownColor ? s.color : primeStyleOf(s.prime).bg, fg: s.ownColor ? s.textColor : primeStyleOf(s.prime).fg, label: code } };
   document.getElementById('sdTitle').textContent = code + ' を直す';
   document.getElementById('sdCode').value = code;
   document.getElementById('sdFull').value = s.name || code;
@@ -1078,12 +1128,13 @@ function renderSiteGuard() {
 }
 function renderSiteColor() {
   renderSiteGuard();
-  const list = COLORS.indexOf(sd.color) < 0 ? [sd.color].concat(COLORS) : COLORS;
-  document.getElementById('sdColor').innerHTML = list.map(c => '<button class="swatch' + (c === sd.color ? ' on' : '') + '" style="background:' + esc(c) + '" onclick="sd.color=\'' + esc(c) + '\';renderSiteColor()" aria-label="色"></button>').join('');
+  sdColor();
 }
+function sdColor() { colorPicker('sdColor', sd.c, primeStyleOf(sd.prime), sd.im, 'sd.c'); }
 function saveSite() {
   const v = id => document.getElementById(id).value;
-  const p = { code: sd.code, newCode: v('sdCode').trim(), full: v('sdFull').trim(), color: sd.color, guard: sd.guard === '身辺', start: v('sdStart'), end: v('sdEnd'), hStart: v('sdHStart'), hEnd: v('sdHEnd') };
+  if (sd.c.mode === 'own' && sd.c.bg === sd.c.fg) return toast('マスの色と文字の色が同じだと、文字が見えません');
+  const p = { code: sd.code, newCode: v('sdCode').trim(), full: v('sdFull').trim(), color: sd.c.mode === 'own' ? sd.c.bg : '', textColor: sd.c.mode === 'own' ? sd.c.fg : '', guard: sd.guard === '身辺', start: v('sdStart'), end: v('sdEnd'), hStart: v('sdHStart'), hEnd: v('sdHEnd') };
   if (!p.newCode) return toast('略称を入れてください');
   if (sd.resident && (!!p.start !== !!p.end || !!p.hStart !== !!p.hEnd)) return toast('所定の時間は、開始と終了の両方を入れてください');
   call('apiEditSite', [TOKEN, day, p], r => {
@@ -1099,7 +1150,7 @@ function openStaffs() {
   call('apiStaffList', [TOKEN], r => { setStaff(r); renderStaffs(); openSheet('staffs'); });
 }
 function renderStaffs() {
-  const groups = [['承認待ち', x => x.status === '承認待ち'], ['在籍', x => x.status === '在籍'], ['退職', x => x.status === '退職']];
+  const groups = [['承認待ち', x => x.status === '承認待ち'], ['在籍', x => x.status === '在籍'], ['休職', x => x.status === '休職'], ['退職', x => x.status === '退職']];
   let h = '';
   groups.forEach(g => {
     const list = staffList.filter(g[1]); // 名簿の並び順（並べかえで決めた順）
@@ -1131,7 +1182,7 @@ function renderStaff() {
     document.getElementById('seStatus').innerHTML = '<span class="hint">在籍（自分）</span>';
   } else {
     opts('seKind', ['社員', 'アルバイト', '臨時'], se.kind, 'kind');
-    opts('seStatus', se.status === '承認待ち' ? ['承認待ち', '在籍', '退職'] : ['在籍', '退職'], se.status, 'status');
+    opts('seStatus', se.status === '承認待ち' ? ['承認待ち', '在籍', '休職', '退職'] : ['在籍', '休職', '退職'], se.status, 'status');
   }
   opts('seReport', ['必要', '不要'], se.report, 'report');
   opts('seShift', ['できる', 'できない'], se.canShift, 'canShift');
@@ -1325,13 +1376,27 @@ function save() {
   const en = document.getElementById('edEnd').value;
   if (!!st !== !!en) return toast('開始と終了の両方を入れてください（未定なら両方とも空欄）');
   const f = { id: edit.id, key: day, site: edit.site, start: st, end: en, need: edit.need, memo: document.getElementById('edMemo').value, members: selectedNicks() };
-  call('apiSaveFrame', [TOKEN, f], r => {
+  // 先に手元のデータを書きかえて画面を閉じる（待たずに次の作業ができる）。保存は裏で行う
+  const m = MONTHS[day.slice(0, 7)];
+  const fr = m && m.frames.find(x => x.id === f.id);
+  if (fr) {
+    const before = fr.members;
+    Object.assign(fr, { start: st, end: en, need: f.need, memo: f.memo });
+    fr.members = f.members.map(n => before.find(x => x.nick === n) || { nick: n, reported: false, own: false, start: '', end: '' });
+    data = dayData(day);
+  }
+  closeSheet('editor');
+  renderList();
+  toast('保存しています…');
+  google.script.run.withSuccessHandler(r => {
     if (r.copied) Object.keys(MONTHS).forEach(k => { if (k !== r.ym) delete MONTHS[k]; }); // 月をまたいで枠を作ったときは、ほかの月を読み直す
-    data = setMonth(r);
-    closeSheet('editor');
-    renderList();
+    MONTHS[r.ym] = r;
+    if (day.slice(0, 7) === r.ym) { data = dayData(day); renderList(); }
     toast((r.warn || '保存しました') + (r.copied ? '\n' + r.copied + 'の枠も作りました' : '') + notifiedText(r));
-  });
+  }).withFailureHandler(e => {
+    toast('保存できませんでした：' + ((e && e.message) || e) + '\nもう一度開いて確かめてください');
+    load(day, true);
+  }).apiSaveFrame(TOKEN, f);
 }
 
 function removeFrame() {
