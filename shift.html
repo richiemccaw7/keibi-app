@@ -1389,6 +1389,8 @@ function save() {
   const f = { id: edit.id, key: day, site: edit.site, start: st, end: en, need: edit.need, memo: document.getElementById('edMemo').value, members: selectedNicks() };
   // 先に手元のデータを書きかえて画面を閉じる（待たずに次の作業ができる）。保存は裏で行う
   const m = MONTHS[day.slice(0, 7)];
+  const ym = day.slice(0, 7);
+  const snapshot = m ? JSON.parse(JSON.stringify(m)) : null; // 保存できなかったときに、画面を元に戻すため
   const fr = m && m.frames.find(x => x.id === f.id);
   if (fr) {
     const before = fr.members;
@@ -1405,8 +1407,10 @@ function save() {
     if (day.slice(0, 7) === r.ym) { data = dayData(day); renderList(); }
     toast((r.warn || '保存しました') + (r.copied ? '\n' + r.copied + 'の枠も作りました' : '') + notifiedText(r));
   }).withFailureHandler(e => {
-    toast('保存できませんでした：' + ((e && e.message) || e) + '\nもう一度開いて確かめてください');
-    load(day, true);
+    // 保存できなかった：先に書きかえた画面を元に戻す（保存していない内容が残って見えないように）
+    if (snapshot) MONTHS[ym] = snapshot;
+    if (day.slice(0, 7) === ym && MONTHS[ym]) { data = dayData(day); renderList(); }
+    toast('保存できませんでした（元に戻しました）：' + ((e && e.message) || e));
   }).apiSaveFrame(TOKEN, f);
 }
 
