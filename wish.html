@@ -192,7 +192,7 @@ function render() {
   const s = document.getElementById('status');
   if (late()) {
     s.className = 'status late';
-    s.textContent = '締切（' + md(D.due) + '）を過ぎました。まだ希望のない日を「追加」だけできます。出した希望を変えるときは社長に連絡してください。';
+    s.textContent = '締切（' + md(D.due) + '）を過ぎました。まだ希望のない日の追加と、出られる時間が増える変更だけできます（例：13:00〜を10:00〜に）。減らす変更は社長に連絡してください。';
   } else if (D.submittedAt) {
     s.className = 'status done';
     s.textContent = '提出済み（' + D.submittedAt.slice(5) + '）。' + (D.afterDue ? '社長として直せます。' : '締切の' + md(D.due) + 'までは何度でも直せます。');
@@ -240,7 +240,6 @@ function quick(k) {
   render();
 }
 function openPanel(d) {
-  if (locked[d]) return toast('締切後は、出した希望を変えられません。\n変えたいときは社長に連絡してください。');
   cur = d;
   const w = W[d] || {};
   sel = w.t || null;
@@ -256,9 +255,28 @@ function renderOpts() {
   document.getElementById('pTimes').style.display = sel === 'time' ? '' : 'none';
 }
 function closePanel() { document.getElementById('sheet').classList.remove('open'); }
+function tm(t) { if (!t) return null; const p = String(t).split(':'); return Number(p[0]) * 60 + Number(p[1] || 0); }
+/** 出られる時間が増える変更か（サーバーの wishWidens と同じ決まり） */
+function widens(isEmp, o, n) {
+  const rank = w => !w ? (isEmp ? 3 : 0) : w.t === 'ok' ? 3 : w.t === 'no' ? 1 : 2;
+  if (!n) return isEmp && o.t !== 'ok';
+  if (o.t === 'time' && n.t === 'time') {
+    const a0 = tm(o.from) === null ? -1 : tm(o.from), b0 = tm(o.to) === null ? 9999 : tm(o.to);
+    const a1 = tm(n.from) === null ? -1 : tm(n.from), b1 = tm(n.to) === null ? 9999 : tm(n.to);
+    return a1 <= a0 && b1 >= b0;
+  }
+  if ((o.t === 'night' && n.t === 'time') || (o.t === 'time' && n.t === 'night')) return false;
+  return rank(n) > rank(o);
+}
 function savePanel() {
   const from = document.getElementById('pFrom').value, to = document.getElementById('pTo').value;
   if (sel === 'time' && !from && !to) return toast('時間を入れてください（開始か終了のどちらかだけでもOK）');
+  // 締切後に、出した希望を変えるとき：出られる時間が増える変更だけ
+  if (locked[cur]) {
+    const o = D.wishes[cur], n = !sel || sel === 'clear' ? null : { t: sel, from: sel === 'time' ? from : '', to: sel === 'time' ? to : '' };
+    const same = n && o.t === n.t && (n.t !== 'time' || (tm(o.from) === tm(n.from) && tm(o.to) === tm(n.to)));
+    if (!same && !widens(emp(), o, n)) return toast('締切後は、出られる時間が増える変更だけできます。\n減らすときは社長に連絡してください。');
+  }
   if (!sel || sel === 'clear') delete W[cur];
   else W[cur] = { t: sel, from: sel === 'time' ? from : '', to: sel === 'time' ? to : '', memo: document.getElementById('pMemo').value.trim() };
   dirty = true;

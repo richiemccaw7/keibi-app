@@ -203,7 +203,7 @@
       <div id="adNew" style="display:none">
         <div class="box"><h3>身辺警護の現場ですか？（最初に選ぶ）</h3><div class="opts" id="nsGuard"></div><div class="hint">身辺の勤務時間と回数は、別に集計します。あとから「現場の管理」の「直す」で変えられます</div></div>
         <div class="box"><h3>略称（必ず入れる・8文字まで）</h3><input class="memo" id="nsCode" maxlength="8" placeholder="例：羽田入国" oninput="A.nw.code=this.value">
-          <div class="hint">シフト表・見る用の表・この画面に出る短い名前です</div></div>
+          <div class="hint">Enforcerシフト表・この画面に出る短い名前です</div></div>
         <div class="box"><h3>正式名（なくてもOK）</h3><input class="memo" id="nsFull" placeholder="例：羽田空港 第3ターミナル 入国" oninput="A.nw.full=this.value">
           <div class="hint">前日の連絡など、LINEのお知らせに出る名前です。空なら略称を使います</div></div>
         <div class="box"><h3>受託元</h3><div class="opts" id="nsPrime"></div></div>
@@ -349,7 +349,7 @@
 
 <div class="sheet" id="order">
   <div class="sheet-head"><button onclick="closeSheet('order')">‹ 戻る</button><div class="t">名簿の並べかえ</div></div>
-  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">見る用の表・勤務時間・資格手当の名簿が、この順になります。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
+  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">Enforcerシフト表・勤務時間・資格手当の名簿が、この順になります（社長・社員・アルバイト・臨時に分かれます）。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
   <div class="foot"><button class="save" onclick="saveOrder()">この順で保存</button></div>
 </div>
 
@@ -371,9 +371,9 @@
     <div class="box"><h3>希望の提出</h3><div class="opts" id="seWishNeed"></div></div>
     <div class="box" id="seWishBox"><h3>希望の出し方</h3><div class="opts" id="seStyle"></div></div>
     <div class="box" id="seRemindBox"><h3>締切日のお知らせ（まだ出していないとき）</h3><div class="opts" id="seRemind"></div></div>
-    <div class="box"><h3>見る用の表（スプレッドシート）</h3><div class="opts" id="seView"></div>
+    <div class="box"><h3>Enforcerシフト表（スプレッドシート）</h3><div class="opts" id="seView"></div>
       <input class="memo" id="seEmail" type="email" placeholder="Gmailなど（Googleアカウントのメールアドレス）" style="margin-top:8px">
-      <div class="hint">「見られる」にすると、このメールアドレスに見る用の表が共有されます（見るだけ。直すことはできません）</div></div>
+      <div class="hint">「見られる」にすると、このメールアドレスにEnforcerシフト表が共有されます（見るだけ。直すことはできません）</div></div>
     <div class="box"><h3>資格（資格手当）</h3><div id="seQuals"></div>
       <button class="newsite" style="margin-top:8px" onclick="openQualPick()">＋ 資格を追加</button>
       <div class="hint" id="seQualSum"></div></div>
@@ -563,7 +563,7 @@ const OWN = 'Enf'; // 自社の呼び名（受託元としての名前）
 /** まとまりの名前。Enfはクライアントごとに分ける（例：Enf ／ WMJ） */
 function groupOf(s) { return s.prime === OWN && s.client ? OWN + ' ／ ' + s.client : s.prime === NO_PRIME ? 'その他' : s.prime; }
 const NO_PRIME = 'その他';
-/** 現場のマスの色（見る用の表と同じ。背景と文字の色） */
+/** 現場のマスの色（Enforcerシフト表と同じ。背景と文字の色） */
 function cellStyle(s) { return 'background:' + esc(s.color) + ';color:' + esc(s.textColor || textColor(s.color)); }
 function primeStyleOf(p) { return ((data && data.primeStyle) || {})[p] || { bg: '#607D8B', fg: '#FFFFFF' }; }
 const BG_COLORS = ['#000000', '#FFFFFF', '#FF00FF', '#0000FF', '#FF0000', '#00FFFF', '#FFFF00', '#00FF00', '#9900FF', '#E06666', '#B45F06', '#7F6000', '#B7B7B7', '#434343', '#274E13', '#0C343D', '#A64D79'];
@@ -580,7 +580,7 @@ function colorPicker(id, o, prime, im, redraw) {
   el.innerHTML = '<div class="opts"><button class="opt' + (o.mode !== 'own' ? ' on' : '') + '" onclick="' + redraw + '.mode=\'prime\';' + redraw.split('.')[0] + 'Color()">受託元の色</button>' +
     '<button class="opt' + (o.mode === 'own' ? ' on' : '') + '" onclick="' + redraw + '.mode=\'own\';' + redraw.split('.')[0] + 'Color()">色を選ぶ</button></div>' +
     (o.mode === 'own' ? '<h3 style="margin-top:12px">マスの色</h3>' + sw(BG_COLORS, o.bg, 'bg') + '<h3 style="margin-top:12px">文字の色</h3>' + sw(FG_COLORS, o.fg, 'fg') : '') +
-    '<div class="preview">見る用の表では：<span class="cell" style="background:' + bg + ';color:' + fg + '">' + esc(o.label || '現場名') + '</span></div>';
+    '<div class="preview">Enforcerシフト表では：<span class="cell" style="background:' + bg + ';color:' + fg + '">' + esc(o.label || '現場名') + '</span></div>';
 }
 /** まとまりの並び順：今のシフト表と同じく、Enf → CREST → ESRR … の順 */
 function primeOrder() {
@@ -732,14 +732,14 @@ function renderNewSite() {
     document.getElementById(id).innerHTML = list.map(v => '<button class="opt' + (v[0] === cur ? ' on' : '') + '" onclick="A.nw.' + key + '=\'' + esc(v[0]) + '\';renderNewSite()">' + esc(v[1]) + '</button>').join('');
   };
   chips('nsGuard', [['身辺', '身辺'], ['その他', 'その他']], n.guard, 'guard');
-  // 受託元のボタンは、その受託元の色（見る用の表と同じ）
+  // 受託元のボタンは、その受託元の色（Enforcerシフト表と同じ）
   document.getElementById('nsPrime').innerHTML = primes.map(p => {
     const st = primeStyleOf(p);
     return '<button class="opt" style="background:' + st.bg + ';color:' + st.fg + ';' + (p === n.prime ? 'outline:3px solid var(--blue);outline-offset:2px' : 'opacity:.85') + '" onclick="A.nw.prime=\'' + esc(p) + '\';renderNewSite()">' + esc(p) + '</button>';
-  }).join('') + (n.prime === NO_PRIME ? '<div class="hint" style="width:100%">「その他」の案件は、見る用の表では、その人の行にだけ出ます</div>' : '');
+  }).join('') + (n.prime === NO_PRIME ? '<div class="hint" style="width:100%">「その他」の案件は、Enforcerシフト表では、その人の行にだけ出ます</div>' : '');
   document.getElementById('nsClientBox').style.display = n.prime === OWN ? '' : 'none';
   chips('nsClient', clients.map(c => [c, c]), n.client, 'client');
-  chips('nsKind', [['臨時案件', '臨時']].concat(n.prime === 'ESRR' ? [['IM案件', 'IM案件']] : []).concat([['常駐', '常駐（見る用の表に常に表示）']]), n.kind, 'kind');
+  chips('nsKind', [['臨時案件', '臨時']].concat(n.prime === 'ESRR' ? [['IM案件', 'IM案件']] : []).concat([['常駐', '常駐（Enforcerシフト表に常に表示）']]), n.kind, 'kind');
   document.getElementById('nsTimeBox').style.display = n.kind === '常駐' ? '' : 'none';
   document.getElementById('nsKeepBox').style.display = n.kind === '常駐' ? 'none' : '';
   AColor();
@@ -1158,7 +1158,7 @@ function renderStaffs() {
     h += '<div class="group">' + g[0] + '（' + list.length + '人）</div>';
     list.forEach(x => {
       h += '<button class="srow' + (x.status === '承認待ち' ? ' wait' : '') + '" onclick="openStaff(\'' + esc(x.id) + '\')"><span class="who"><div class="name">' + esc(x.name) +
-        '</div><div class="sub">呼び名：' + esc(x.nick) + (x.lineName ? '　LINE名：' + esc(x.lineName) : '') + (x.quals.length ? '　資格 ' + x.quals.length + '件' : '') + (x.view === '見られる' ? '　見る用◯' : '') + '</div></span><span class="badge none">' + esc(x.kind) + '</span></button>';
+        '</div><div class="sub">呼び名：' + esc(x.nick) + (x.lineName ? '　LINE名：' + esc(x.lineName) : '') + (x.quals.length ? '　資格 ' + x.quals.length + '件' : '') + (x.view === '見られる' ? '　シフト表◯' : '') + '</div></span><span class="badge none">' + esc(x.kind) + '</span></button>';
     });
   });
   document.getElementById('staffList').innerHTML = h || '<div class="empty">まだ誰も登録されていません。</div>';
@@ -1201,7 +1201,7 @@ function saveStaff() {
   se.name = document.getElementById('seName').value;
   se.nick = document.getElementById('seNick').value;
   se.email = document.getElementById('seEmail').value.trim();
-  if (se.view === '見られる' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(se.email)) return toast('見る用の表を見られるようにするには、メールアドレスを入れてください');
+  if (se.view === '見られる' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(se.email)) return toast('Enforcerシフト表を見られるようにするには、メールアドレスを入れてください');
   call('apiSaveStaff', [TOKEN, se], r => {
     setStaff(r);
     closeSheet('staffEdit');
@@ -1329,16 +1329,26 @@ function openOrder() {
   openSheet('order');
 }
 function renderOrder() {
-  document.getElementById('orderList').innerHTML = ORD.map((id, i) => {
+  // 社長・社員・アルバイト・臨時のまとまりごとに出す（並べかえは、まとまりの中だけ）
+  const kindName = k => k === '管理者' ? '社長' : k;
+  let h = '', prev = null, n = 0;
+  ORD.forEach((id, i) => {
     const x = staffList.find(y => y.id === id);
-    return '<div class="orow"><span class="n">' + (i + 1) + '</span><span class="name">' + esc(x.name) + '</span>' +
-      '<button onclick="moveOrder(' + i + ',-1)" ' + (i ? '' : 'disabled style="opacity:.3"') + '>↑</button>' +
-      '<button onclick="moveOrder(' + i + ',1)" ' + (i < ORD.length - 1 ? '' : 'disabled style="opacity:.3"') + '>↓</button></div>';
-  }).join('');
+    if (x.kind !== prev) { h += '<div class="group">' + esc(kindName(x.kind)) + '</div>'; prev = x.kind; n = 0; }
+    n++;
+    const sameUp = i > 0 && staffList.find(y => y.id === ORD[i - 1]).kind === x.kind;
+    const sameDown = i < ORD.length - 1 && staffList.find(y => y.id === ORD[i + 1]).kind === x.kind;
+    h += '<div class="orow"><span class="n">' + n + '</span><span class="name">' + esc(x.name) + '</span>' +
+      '<button onclick="moveOrder(' + i + ',-1)" ' + (sameUp ? '' : 'disabled style="opacity:.3"') + '>↑</button>' +
+      '<button onclick="moveOrder(' + i + ',1)" ' + (sameDown ? '' : 'disabled style="opacity:.3"') + '>↓</button></div>';
+  });
+  document.getElementById('orderList').innerHTML = h;
 }
 function moveOrder(i, d) {
   const j = i + d;
   if (j < 0 || j >= ORD.length) return;
+  const a = staffList.find(y => y.id === ORD[i]), b = staffList.find(y => y.id === ORD[j]);
+  if (a.kind !== b.kind) return; // 区分をまたいでは動かせない
   const t = ORD[i]; ORD[i] = ORD[j]; ORD[j] = t;
   renderOrder();
 }
