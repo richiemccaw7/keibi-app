@@ -349,7 +349,7 @@
 
 <div class="sheet" id="order">
   <div class="sheet-head"><button onclick="closeSheet('order')">‹ 戻る</button><div class="t">名簿の並べかえ</div></div>
-  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">Enforcerシフト表・勤務時間・資格手当の名簿が、この順になります（社長・社員・アルバイト・臨時に分かれます）。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
+  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">Enforcerシフト表・勤務時間・資格手当の名簿が、この順になります（G・社長・社員・アルバイト・臨時に分かれます）。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
   <div class="foot"><button class="save" onclick="saveOrder()">この順で保存</button></div>
 </div>
 
@@ -1181,7 +1181,7 @@ function renderStaff() {
     document.getElementById('seKind').innerHTML = '<span class="hint">管理者（自分）</span>';
     document.getElementById('seStatus').innerHTML = '<span class="hint">在籍（自分）</span>';
   } else {
-    opts('seKind', ['社員', 'アルバイト', '臨時'], se.kind, 'kind');
+    opts('seKind', ['G', '社員', 'アルバイト', '臨時'], se.kind, 'kind'); // G：GARの社員（権限はアルバイトと同じ）
     opts('seStatus', se.status === '承認待ち' ? ['承認待ち', '在籍', '休職', '退職'] : ['在籍', '休職', '退職'], se.status, 'status');
   }
   opts('seReport', ['必要', '不要'], se.report, 'report');
