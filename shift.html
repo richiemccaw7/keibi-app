@@ -528,7 +528,7 @@ function dayData(key) {
   const m = MONTHS[key.slice(0, 7)];
   const off = isOff(key);
   return {
-    key: key, isAdmin: m.isAdmin, canEdit: m.canEdit, canProxy: m.canProxy, holidays: m.holidays, primeStyle: m.primeStyle,
+    key: key, isAdmin: m.isAdmin, canEdit: m.canEdit, canProxy: m.canProxy, holidays: m.holidays, primeStyle: m.primeStyle, acks: m.acks || {},
     sites: m.sites.map(s => Object.assign({}, s, off && s.hStart ? { start: s.hStart, end: s.hEnd } : {})), // 土日祝は土日祝の時間
     frames: m.frames.filter(f => f.key === key),
     people: m.people.map(p => Object.assign({}, p, { wish: m.wishes[p.nick + '|' + key] || null })),
@@ -964,6 +964,9 @@ function showEditor(f) {
     if (p.other.length) sub.push('他：' + p.other.join('、'));
     if (p.memo) sub.push('メモ：' + p.memo);
     if (p.note) sub.push('特記：' + p.note);
+    // シフト変更の連絡に「了解」が押されたか
+    const ak = (data.acks || {})[p.nick + '|' + day];
+    if (ak) sub.push(ak.state === '確認済み' ? '変更の連絡：確認済み' + (ak.ackAt ? '（' + String(ak.ackAt).slice(11, 16) + '）' : '') : ak.state === '送れなかった' ? '⚠ 変更の連絡を送れていません' : '⚠ 変更の連絡：まだ確認していません');
     if (lock && data.canEdit) sub.push('報告済みのため外せません');
     const own = m && m.own ? '<div class="sub own">この人だけ ' + esc(m.start + '〜' + m.end) + '</div>' : '';
     // 保存済みの人には「時間・報告」ボタン（社長）、「報告」ボタン（代理を許可された社員）を出す
