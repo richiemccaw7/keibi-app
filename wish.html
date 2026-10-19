@@ -324,7 +324,18 @@ function confirmLeave() {
     setTimeout(() => { fit(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 350);
   });
   // 時間の入力：くるくるは 0:00 から。何も選ばずに閉じたら空のまま
-  document.addEventListener('focusin', e => { const el = e.target; if (el.type === 'time' && !el.value) { el.value = '00:00'; el.dataset.auto = '1'; } });
+  // iPhoneは、くるくるが開く瞬間の値から始まるので、指が触れた瞬間（開く前）に 0:00 を入れる
+  const prefill = e => {
+    const el = e.target;
+    if (!el || el.type !== 'time' || el.value) return;
+    el.value = '00:00';
+    el.dataset.auto = '1';
+    // 画面をなぞっただけで、くるくるを開かなかったときは空に戻す
+    setTimeout(() => { if (el.dataset.auto && document.activeElement !== el) { el.value = ''; delete el.dataset.auto; } }, 900);
+  };
+  document.addEventListener('touchstart', prefill, { capture: true, passive: true });
+  document.addEventListener('pointerdown', prefill, true);
+  document.addEventListener('focusin', prefill); // キーボードで移ってきたとき
   document.addEventListener('change', e => { if (e.target.type === 'time') delete e.target.dataset.auto; }, true);
   document.addEventListener('focusout', e => { const el = e.target; if (el.type === 'time' && el.dataset.auto) { el.value = ''; delete el.dataset.auto; } });
 })();
