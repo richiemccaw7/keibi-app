@@ -1045,7 +1045,12 @@ function sendReport(col, time) {
     toast(time ? col + 'を代わりに入れました' : col + 'の報告を取り消しました');
   });
 }
-function notifiedText(r) { return r.notified && r.notified.length ? '\n' + r.notified.join('・') + 'さんにLINEで知らせました' : ''; }
+function notifiedText(r) {
+  const list = r.notified || [];
+  const ok = list.filter(n => n.charAt(0) !== '!'), ng = list.filter(n => n.charAt(0) === '!').map(n => n.slice(1));
+  return (ok.length ? '\n' + ok.join('・') + 'さんにLINEで知らせました' : '') +
+    (ng.length ? '\n⚠ ' + ng.join('・') + 'さんにはLINEで送れませんでした。電話などで伝えてください' : '');
+}
 
 // ---------- 枠をまとめて消す（現場の管理から） ----------
 let bk = null;
