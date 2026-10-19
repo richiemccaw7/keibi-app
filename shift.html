@@ -647,7 +647,7 @@ function openAdd() {
   A = { step: 1, code: '', isNew: false, nw: { guard: '', code: '', full: '', prime: OWN, client: '', kind: '臨時案件', keep: false, start: '', end: '', hStart: '', hEnd: '' },
     nc: { mode: 'prime', bg: '#0000FF', fg: '#FFFFFF' },
     useStd: true, need: 1, ym: day.slice(0, 7), picked: {} };
-  A.picked[day] = true;
+  // 日にちは最初は何も選ばない（自分でタップして選ぶ）
   document.getElementById('adSearch').value = '';
   ['nsCode', 'nsFull', 'nsStart', 'nsEnd', 'nsHStart', 'nsHEnd', 'adStart', 'adEnd', 'adMemo'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('nsKeep').checked = false;
