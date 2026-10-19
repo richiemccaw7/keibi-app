@@ -236,6 +236,7 @@
         <div class="times"><input type="time" id="adStart"> 〜 <input type="time" id="adEnd"></div>
         <div class="hint" id="adTimeHint"></div>
       </div>
+      <div class="box" id="adGuardPayBox" style="display:none"><label style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="adGuardPay" style="width:24px;height:24px" onchange="A.guardPay=this.checked"> 身辺手当を支給する</label><div class="hint">身辺の枠だけ。チェックした枠に入った人は、勤務時間の表の「身辺手当の回数」に数えます</div></div>
       <div class="box"><h3>必要人数（1日あたり）</h3><select class="need-sel" id="adNeedSel" onchange="A.need=Number(this.value)"></select><div class="hint">まだ分からないときは「未定」。シフト表に黄色で「人数未定」と出ます</div></div>
       <div class="box"><h3>応援メモ（なくてもOK・社長と社員だけに表示）</h3><input class="memo" id="adMemo" placeholder="例：ESRR 1人"></div>
     </div>
@@ -272,6 +273,7 @@
       <h3>必要人数</h3>
       <select class="need-sel" id="edNeedSel" onchange="edit.need=Number(this.value)"></select>
     </div>
+    <div class="box" id="edGuardPayBox" style="display:none"><label style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="edGuardPay" style="width:24px;height:24px" onchange="edit.guardPay=this.checked"> 身辺手当を支給する</label><div class="hint">身辺の枠だけ。チェックした枠に入った人は、勤務時間の表の「身辺手当の回数」に数えます</div></div>
     <div class="box">
       <h3>応援メモ（社長・社員だけに表示）</h3>
       <input class="memo" id="edMemo" placeholder="例：ESRR 1人">
@@ -620,7 +622,7 @@ function renderList() {
       const n = f.members.length;
       const count = f.need ? '<div class="count' + (n < f.need ? ' short' : '') + '">' + n + '/' + f.need + '人</div>' : '<div class="count" style="background:#3A3410;color:#F2C14E">' + n + '人・人数未定</div>';
       h += '<button class="card" onclick="openEditor(\'' + f.id + '\')"><div class="bar" style="background:' + esc(['#FFFFFF', '#000000'].indexOf(String(s.color).toUpperCase()) >= 0 ? s.textColor : s.color) + '"></div><div class="body">' +
-        '<div class="title"><span class="cell" style="' + cellStyle(s) + '">' + esc(s.code) + '</span>' + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
+        '<div class="title"><span class="cell" style="' + cellStyle(s) + '">' + esc(s.code) + '</span>' + (s.guard ? '<span class="guard">身辺' + (f.guardPay ? '・手当' : '') + '</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
         '<div class="chips">' + (n ? f.members.map(m => '<span class="chip">' + esc(m.nick) + (m.own ? '<span style="color:var(--red)"> ' + esc(m.start + '〜' + m.end) + '</span>' : '') + '</span>').join('') : '<span class="chip" style="color:var(--red)">まだ誰もいません</span>') + '</div>' +
         '</div>' + count + '</button>';
     });
@@ -657,7 +659,7 @@ function adSite() {
   if (!A.isNew) return siteOf(A.code);
   const n = A.nw;
   const ps = primeStyleOf(n.prime);
-  return { code: n.code.trim(), name: n.full.trim() || n.code.trim(), kind: n.kind, color: A.nc.mode === 'own' ? A.nc.bg : ps.bg, textColor: A.nc.mode === 'own' ? A.nc.fg : ps.fg, start: n.start, end: n.end, hStart: n.hStart, hEnd: n.hEnd };
+  return { guard: n.guard === '身辺', code: n.code.trim(), name: n.full.trim() || n.code.trim(), kind: n.kind, color: A.nc.mode === 'own' ? A.nc.bg : ps.bg, textColor: A.nc.mode === 'own' ? A.nc.fg : ps.fg, start: n.start, end: n.end, hStart: n.hStart, hEnd: n.hEnd };
 }
 function renderAdd() {
   const names = ['現場', '時間と人数', '日にち'];
@@ -681,6 +683,8 @@ function renderAdd() {
     document.getElementById('adTitle').textContent = s.code;
     const res = s.kind === '常駐';
     document.getElementById('adStdBox').style.display = res ? '' : 'none';
+    document.getElementById('adGuardPayBox').style.display = s.guard ? '' : 'none'; // 身辺の現場だけ
+    document.getElementById('adGuardPay').checked = !!A.guardPay;
     document.getElementById('adStd').innerHTML = [[true, '所定の時間'], [false, '時間を変える']].map(o => '<button class="opt' + (o[0] === A.useStd ? ' on' : '') + '" onclick="A.useStd=' + o[0] + ';renderAdd()">' + o[1] + '</button>').join('');
     document.getElementById('adStdHint').textContent = '平日 ' + (s.start ? s.start + '〜' + s.end : '未定') + '／土日祝 ' + (s.hStart ? s.hStart + '〜' + s.hEnd : s.start ? s.start + '〜' + s.end : '未定') + '。日にちに合わせて自動で入ります';
     document.getElementById('adTimeBox').style.display = res && A.useStd ? 'none' : '';
@@ -869,7 +873,7 @@ function makeFrames() {
   const fixed = s.kind === '常駐' && A.useStd;
   const one = keys.length === 1;
   const p = {
-    keys: keys, need: A.need, memo: document.getElementById('adMemo').value,
+    keys: keys, need: A.need, memo: document.getElementById('adMemo').value, guardPay: !!(s.guard && A.guardPay),
     start: fixed ? '' : document.getElementById('adStart').value, end: fixed ? '' : document.getElementById('adEnd').value,
     view: one ? keys[0] : day, // 1日だけなら、その日を開いて人を選べるようにする
   };
@@ -928,6 +932,8 @@ function showEditor(f) {
   document.getElementById('edStart').value = pad(f.start);
   document.getElementById('edEnd').value = pad(f.end);
   document.getElementById('edMemo').value = f.memo || '';
+  document.getElementById('edGuardPayBox').style.display = siteOf(f.site).guard ? '' : 'none'; // 身辺の現場だけ
+  document.getElementById('edGuardPay').checked = !!f.guardPay;
   document.getElementById('edDel').style.display = f.id ? '' : 'none';
   document.getElementById('edReadonly').style.display = data.canEdit ? 'none' : '';
   document.getElementById('edEdit').style.display = data.canEdit ? '' : 'none';
@@ -1463,7 +1469,7 @@ function save() {
   const st = document.getElementById('edStart').value;
   const en = document.getElementById('edEnd').value;
   if (!!st !== !!en) return toast('開始と終了の両方を入れてください（未定なら両方とも空欄）');
-  const f = { id: edit.id, key: day, site: edit.site, start: st, end: en, need: edit.need, memo: document.getElementById('edMemo').value, members: selectedNicks() };
+  const f = { id: edit.id, key: day, site: edit.site, start: st, end: en, need: edit.need, memo: document.getElementById('edMemo').value, members: selectedNicks(), guardPay: !!edit.guardPay };
   // 先に手元のデータを書きかえて画面を閉じる（待たずに次の作業ができる）。保存は裏で行う
   const m = MONTHS[day.slice(0, 7)];
   const ym = day.slice(0, 7);
@@ -1471,7 +1477,7 @@ function save() {
   const fr = m && m.frames.find(x => x.id === f.id);
   if (fr) {
     const before = fr.members;
-    Object.assign(fr, { start: st, end: en, need: f.need, memo: f.memo });
+    Object.assign(fr, { start: st, end: en, need: f.need, memo: f.memo, guardPay: f.guardPay });
     fr.members = f.members.map(n => before.find(x => x.nick === n) || { nick: n, reported: false, own: false, start: '', end: '' });
     data = dayData(day);
   }
