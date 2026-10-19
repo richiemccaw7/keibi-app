@@ -763,11 +763,11 @@ function AColor() {
   A.nc.label = A.nw.code.trim() || '現場名';
   colorPicker('nsColor', A.nc, primeStyleOf(A.nw.prime), A.nw.kind === 'IM案件', 'A.nc');
 }
-/** 人数のくるくる：未定、1〜30人 */
+/** 人数のくるくる：未定、1〜99人 */
 function fillNeed(id, cur) {
   const el = document.getElementById(id);
   let h = '<option value="0">未定</option>';
-  for (let i = 1; i <= 30; i++) h += '<option value="' + i + '">' + i + '人</option>';
+  for (let i = 1; i <= 99; i++) h += '<option value="' + i + '">' + i + '人</option>';
   el.innerHTML = h;
   el.value = String(cur || 0);
 }
