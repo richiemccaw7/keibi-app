@@ -53,7 +53,8 @@
   .foot .dirty { font-size: 13px; color: var(--red); text-align: center; margin-bottom: 6px; display: none; }
   .foot button { width: 100%; height: 58px; border-radius: 16px; background: var(--blue); color: #fff; font-size: 19px; font-weight: 700; }
   .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: flex-end; z-index: 20; }
-  .sheet.open { display: flex; }
+  .sheet.open { display: flex; top: var(--vvt, 0px); height: var(--vvh, 100%); bottom: auto; } /* キーボードの上に出す */
+  html, body, button, input, select, textarea { touch-action: manipulation; } /* 2回タップで拡大しない */
   .panel { background: var(--card); width: 100%; border-radius: 20px 20px 0 0; padding: 16px 14px 20px; }
   .panel h2 { margin: 0 0 10px; font-size: 20px; }
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -307,6 +308,26 @@ function confirmLeave() {
   toast('まだ送っていない変更があります。\n先に下のボタンで送ってください。');
   return false;
 }
+
+// キーボードが出ても、入力欄が隠れないように
+(function () {
+  const vv = window.visualViewport;
+  const fit = () => {
+    if (!vv) return;
+    document.documentElement.style.setProperty('--vvh', vv.height + 'px');
+    document.documentElement.style.setProperty('--vvt', vv.offsetTop + 'px');
+  };
+  if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (!el.matches || !el.matches('input, textarea, select')) return;
+    setTimeout(() => { fit(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 350);
+  });
+  // 時間の入力：くるくるは 0:00 から。何も選ばずに閉じたら空のまま
+  document.addEventListener('focusin', e => { const el = e.target; if (el.type === 'time' && !el.value) { el.value = '00:00'; el.dataset.auto = '1'; } });
+  document.addEventListener('change', e => { if (e.target.type === 'time') delete e.target.dataset.auto; }, true);
+  document.addEventListener('focusout', e => { const el = e.target; if (el.type === 'time' && el.dataset.auto) { el.value = ''; delete el.dataset.auto; } });
+})();
 
 if (FIRST) setData(FIRST);
 else load('', ''); // GitHub Pages から開いたときは、ここで読みに行く

@@ -18,6 +18,12 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   input, textarea, select { background: var(--input); color: var(--ink); }
+  html, body, button, input, select, textarea, label { touch-action: manipulation; } /* 2回タップで拡大しない */
+  .sheet.open { top: var(--vvt, 0px); height: var(--vvh, 100%); bottom: auto; } /* キーボードが出ても、入力欄が隠れない高さ */
+  .cal.drag { touch-action: none; } /* なぞって選ぶ（画面は動かさない） */
+  .need-sel { height: 52px; min-width: 140px; font-size: 20px; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; }
+  .orow .grip { width: 40px; height: 40px; display: grid; place-items: center; color: var(--sub); font-size: 22px; touch-action: none; cursor: grab; }
+  .orow.drag { outline: 2px solid var(--blue); }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.45 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
   button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
   header { position: sticky; top: 0; z-index: 5; background: var(--brand); border-bottom: 1px solid var(--line); padding: 10px 12px 8px; }
@@ -58,7 +64,7 @@
   .qrow .who { flex: 1; min-width: 10em; }
   .qrow .name { font-weight: 700; }
   .qrow .sub { font-size: 13px; color: var(--sub); }
-  .qrow input[type=month] { height: 40px; font-size: 15px; border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; }
+  .qrow input[type=month] { height: 40px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; }
   .qpick { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
   .qpick .who { flex: 1; }
   .qpick .name { font-weight: 700; font-size: 17px; }
@@ -230,7 +236,7 @@
         <div class="times"><input type="time" id="adStart"> 〜 <input type="time" id="adEnd"></div>
         <div class="hint" id="adTimeHint"></div>
       </div>
-      <div class="box"><h3>必要人数（1日あたり）</h3><div class="stepper"><button onclick="adNeed(-1)">−</button><b id="adNeedV"></b><button onclick="adNeed(1)">＋</button></div></div>
+      <div class="box"><h3>必要人数（1日あたり）</h3><select class="need-sel" id="adNeedSel" onchange="A.need=Number(this.value)"></select><div class="hint">まだ分からないときは「未定」。シフト表に黄色で「人数未定」と出ます</div></div>
       <div class="box"><h3>応援メモ（なくてもOK・社長と社員だけに表示）</h3><input class="memo" id="adMemo" placeholder="例：ESRR 1人"></div>
     </div>
     <div id="ad3">
@@ -264,7 +270,7 @@
     </div>
     <div class="box">
       <h3>必要人数</h3>
-      <div class="stepper"><button onclick="stepNeed(-1)">−</button><b id="edNeed"></b><button onclick="stepNeed(1)">＋</button></div>
+      <select class="need-sel" id="edNeedSel" onchange="edit.need=Number(this.value)"></select>
     </div>
     <div class="box">
       <h3>応援メモ（社長・社員だけに表示）</h3>
@@ -350,7 +356,7 @@
 
 <div class="sheet" id="order">
   <div class="sheet-head"><button onclick="closeSheet('order')">‹ 戻る</button><div class="t">名簿の並べかえ</div></div>
-  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">Enforcerシフト表・勤務時間・資格手当の名簿が、この順になります（G・社長・社員・アルバイト・臨時に分かれます）。↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
+  <div class="sheet-body"><div class="hint" style="margin-bottom:10px">Enforcerシフト表・勤務時間・資格手当の名簿が、この順になります（G・社長・社員・アルバイト・臨時に分かれます）。左の「≡」をつまんで上下に動かすか、↑↓で動かして、下の「この順で保存」を押してください。</div><div id="orderList"></div></div>
   <div class="foot"><button class="save" onclick="saveOrder()">この順で保存</button></div>
 </div>
 
@@ -372,6 +378,8 @@
     <div class="box"><h3>希望の提出</h3><div class="opts" id="seWishNeed"></div></div>
     <div class="box" id="seWishBox"><h3>希望の出し方</h3><div class="opts" id="seStyle"></div></div>
     <div class="box" id="seRemindBox"><h3>締切日のお知らせ（まだ出していないとき）</h3><div class="opts" id="seRemind"></div></div>
+    <div class="box" id="seNewBox"><h3>シフト表の「New」</h3><label style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="seNew" style="width:24px;height:24px" onchange="se._newTouched=true;se.newYm=this.checked?thisYm():''"> <span id="seNewLabel"></span></label>
+      <div class="hint">新しく入った人の左に「New」を出します（その月のシフト表だけ）。承認した月には自動で付きます</div></div>
     <div class="box"><h3>Enforcerシフト表（スプレッドシート）</h3><div class="opts" id="seView"></div>
       <input class="memo" id="seEmail" type="email" placeholder="Gmailなど（Googleアカウントのメールアドレス）" style="margin-top:8px">
       <div class="hint">「見られる」にすると、このメールアドレスにEnforcerシフト表が共有されます（見るだけ。直すことはできません）</div></div>
@@ -567,7 +575,7 @@ const NO_PRIME = 'その他';
 /** 現場のマスの色（Enforcerシフト表と同じ。背景と文字の色） */
 function cellStyle(s) { return 'background:' + esc(s.color) + ';color:' + esc(s.textColor || textColor(s.color)); }
 function primeStyleOf(p) { return ((data && data.primeStyle) || {})[p] || { bg: '#607D8B', fg: '#FFFFFF' }; }
-const BG_COLORS = ['#000000', '#FFFFFF', '#FF00FF', '#0000FF', '#FF0000', '#00FFFF', '#FFFF00', '#00FF00', '#9900FF', '#E06666', '#B45F06', '#7F6000', '#B7B7B7', '#434343', '#274E13', '#0C343D', '#A64D79'];
+const BG_COLORS = ['#000000', '#FFFFFF', '#FF9900', '#FF00FF', '#0000FF', '#FF0000', '#00FFFF', '#FFFF00', '#00FF00', '#9900FF', '#E06666', '#B45F06', '#7F6000', '#B7B7B7', '#434343', '#274E13', '#0C343D', '#A64D79'];
 const FG_COLORS = ['#FFFFFF', '#000000', '#FF00FF', '#FF0000', '#0000FF'];
 /**
  * 色を選ぶ部品。o：{ mode: 'prime' | 'own', bg, fg }。受託元の色を使うか、背景と文字の色を選ぶか
@@ -601,14 +609,16 @@ function renderList() {
   const order = data.sites.map(s => s.code);
   const frames = data.frames.slice().sort((a, b) => (order.indexOf(a.site) - order.indexOf(b.site)) || (a.start || '99').localeCompare(b.start || '99'));
   let h = '';
-  primeOrder().concat(['その他']).forEach(p => {
+  const groups = primeOrder();
+  if (groups.indexOf('その他') < 0) groups.push('その他'); // 受託元が分からない現場の行き先（すでにあれば足さない）
+  groups.forEach(p => {
     const fs = frames.filter(f => groupOf(siteOf(f.site)) === p);
     if (!fs.length) return;
     h += '<div class="group">' + esc(p) + '</div>';
     fs.forEach(f => {
       const s = siteOf(f.site);
       const n = f.members.length;
-      const count = f.need ? '<div class="count' + (n < f.need ? ' short' : '') + '">' + n + '/' + f.need + '人</div>' : '';
+      const count = f.need ? '<div class="count' + (n < f.need ? ' short' : '') + '">' + n + '/' + f.need + '人</div>' : '<div class="count" style="background:#3A3410;color:#F2C14E">' + n + '人・人数未定</div>';
       h += '<button class="card" onclick="openEditor(\'' + f.id + '\')"><div class="bar" style="background:' + esc(['#FFFFFF', '#000000'].indexOf(String(s.color).toUpperCase()) >= 0 ? s.textColor : s.color) + '"></div><div class="body">' +
         '<div class="title"><span class="cell" style="' + cellStyle(s) + '">' + esc(s.code) + '</span>' + (s.guard ? '<span class="guard">身辺</span>' : '') + '<small>' + esc(s.name) + '</small></div><div class="time">' + esc(timeText(f)) + (f.memo ? '　' + esc(f.memo) : '') + '</div>' +
         '<div class="chips">' + (n ? f.members.map(m => '<span class="chip">' + esc(m.nick) + (m.own ? '<span style="color:var(--red)"> ' + esc(m.start + '〜' + m.end) + '</span>' : '') + '</span>').join('') : '<span class="chip" style="color:var(--red)">まだ誰もいません</span>') + '</div>' +
@@ -676,7 +686,7 @@ function renderAdd() {
     document.getElementById('adTimeBox').style.display = res && A.useStd ? 'none' : '';
     document.getElementById('adTimeTitle').textContent = res ? 'この枠の時間' : '時間';
     document.getElementById('adTimeHint').textContent = res ? '選んだ日すべてに、この時間が入ります' : 'まだ決まっていなければ空のままでOK（あとから入れられます）。夜勤もそのまま入れてください（例：17:00〜8:00）';
-    document.getElementById('adNeedV').textContent = A.need + '人';
+    fillNeed('adNeedSel', A.need);
     go.textContent = '次へ（日にち）';
   } else {
     document.getElementById('adTitle').textContent = adSite().code;
@@ -749,7 +759,14 @@ function AColor() {
   A.nc.label = A.nw.code.trim() || '現場名';
   colorPicker('nsColor', A.nc, primeStyleOf(A.nw.prime), A.nw.kind === 'IM案件', 'A.nc');
 }
-function adNeed(n) { A.need = Math.max(1, A.need + n); document.getElementById('adNeedV').textContent = A.need + '人'; }
+/** 人数のくるくる：未定、1〜30人 */
+function fillNeed(id, cur) {
+  const el = document.getElementById(id);
+  let h = '<option value="0">未定</option>';
+  for (let i = 1; i <= 30; i++) h += '<option value="' + i + '">' + i + '人</option>';
+  el.innerHTML = h;
+  el.value = String(cur || 0);
+}
 function adBackStep() { A.step--; renderAdd(); }
 function adNext() {
   if (A.step === 1) {
@@ -800,6 +817,29 @@ function adPick(kind) {
   renderAdCal();
 }
 function adToggle(k) { if (A.picked[k]) delete A.picked[k]; else A.picked[k] = true; renderAdCal(); }
+/**
+ * カレンダーを、指を離さずになぞって何日も選べるようにする（タップでも選べる）
+ * 最初に触った日が「選ぶ」なら、なぞった日を全部選ぶ。「外す」なら全部外す
+ */
+function dragSelect(id, isOn, setOn, can, redraw) {
+  const cal = document.getElementById(id);
+  cal.classList.add('drag');
+  let mode = null, seen = {};
+  const keyAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); const b = el && el.closest('button[data-k]'); return b && cal.contains(b) ? b.dataset.k : null; };
+  const touch = k => { if (!k || seen[k] || !can(k)) return; seen[k] = true; setOn(k, mode); redraw(); };
+  cal.addEventListener('pointerdown', e => {
+    const k = keyAt(e);
+    if (!k || !can(k)) return;
+    e.preventDefault();
+    mode = !isOn(k); seen = {};
+    cal.setPointerCapture(e.pointerId);
+    touch(k);
+  });
+  cal.addEventListener('pointermove', e => { if (mode !== null) touch(keyAt(e)); });
+  const end = () => { mode = null; seen = {}; };
+  cal.addEventListener('pointerup', end);
+  cal.addEventListener('pointercancel', end);
+}
 function renderAdCal() {
   const p = A.ym.split('/').map(Number);
   document.getElementById('adMonthV').textContent = p[0] + '年' + p[1] + '月';
@@ -808,7 +848,7 @@ function renderAdCal() {
   for (let i = 0; i < lead; i++) h += '<div></div>';
   monthDays(A.ym).forEach(k => {
     const d = toDate(k), has = adHas(k);
-    h += '<button class="' + (A.picked[k] ? 'on ' : '') + (has ? 'has ' : '') + wdClass(d) + '" onclick="adToggle(\'' + k + '\')">' + d.getDate() + (has ? '<small>済</small>' : '') + '</button>';
+    h += '<button data-k="' + k + '" class="' + (A.picked[k] ? 'on ' : '') + (has ? 'has ' : '') + wdClass(d) + '">' + d.getDate() + (has ? '<small>済</small>' : '') + '</button>';
   });
   document.getElementById('adCal').innerHTML = h;
   const ks = Object.keys(A.picked).sort();
@@ -816,7 +856,7 @@ function renderAdCal() {
   const st = document.getElementById('adStart').value, en = document.getElementById('adEnd').value;
   const t = s.kind === '常駐' && A.useStd ? '所定の時間' : st ? st + '〜' + en : '時間未定';
   document.getElementById('adSum').textContent = ks.length
-    ? (ks.length === 1 ? dayText(ks[0]) + ' の1日' : md(ks[0]) + '〜' + md(ks[ks.length - 1]) + ' のうち ' + ks.length + '日') + '\n' + s.code + '　' + t + '　' + A.need + '人ずつ'
+    ? (ks.length === 1 ? dayText(ks[0]) + ' の1日' : md(ks[0]) + '〜' + md(ks[ks.length - 1]) + ' のうち ' + ks.length + '日') + '\n' + s.code + '　' + t + '　' + (A.need ? A.need + '人ずつ' : '人数未定')
     : 'カレンダーで日にちをタップしてください';
   const go = document.getElementById('adGo');
   go.textContent = ks.length ? ks.length + '日分の枠を作る' : '日にちを選んでください';
@@ -1041,7 +1081,7 @@ function renderBulk() {
   monthDays(bk.ym).forEach(k => {
     const d = toDate(k), done = bulkDone(k);
     const cls = (bk.picked[k] ? ' del' : done ? '' : ' done') + ' ' + wdClass(d);
-    h += '<button class="' + cls + '" onclick="bulkToggle(\'' + k + '\')">' + d.getDate() + (done ? '<small>枠あり</small>' : '') + '</button>';
+    h += '<button data-k="' + k + '" class="' + cls + '">' + d.getDate() + (done ? '<small>枠あり</small>' : '') + '</button>';
   });
   document.getElementById('bkCal').innerHTML = h;
   const n = Object.keys(bk.picked).length;
@@ -1169,6 +1209,7 @@ function opts(id, list, cur, key) {
 }
 function openStaff(id) {
   se = JSON.parse(JSON.stringify(staffList.find(x => x.id === id)));
+  se._wasWaiting = se.status === '承認待ち'; // 承認待ちから在籍にするときは、New を最初から付ける
   document.getElementById('seName').value = se.name;
   document.getElementById('seNick').value = se.nick;
   document.getElementById('seEmail').value = se.email || '';
@@ -1196,6 +1237,11 @@ function renderStaff() {
   document.getElementById('seWishBox').style.display = se.wishNeed === '必要' ? '' : 'none';
   document.getElementById('seRemindBox').style.display = se.wishNeed === '必要' ? '' : 'none';
   opts('seView', ['見られる', '見られない'], se.view, 'view');
+  // New：今月にNewを出すか（承認待ちから在籍にするときは、最初から付けておく）
+  if (se.newYm === undefined || se.newYm === null) se.newYm = '';
+  if (se.status === '在籍' && se._wasWaiting && se.newYm === '' && !se._newTouched) se.newYm = thisYm();
+  document.getElementById('seNew').checked = se.newYm === thisYm();
+  document.getElementById('seNewLabel').textContent = ymText(thisYm()) + 'のシフト表にNewを出す' + (se.newYm && se.newYm !== thisYm() ? '（今は' + ymText(se.newYm) + 'に出す設定）' : '');
   renderQuals();
 }
 function saveStaff() {
@@ -1339,12 +1385,44 @@ function renderOrder() {
     n++;
     const sameUp = i > 0 && staffList.find(y => y.id === ORD[i - 1]).kind === x.kind;
     const sameDown = i < ORD.length - 1 && staffList.find(y => y.id === ORD[i + 1]).kind === x.kind;
-    h += '<div class="orow"><span class="n">' + n + '</span><span class="name">' + esc(x.name) + '</span>' +
+    h += '<div class="orow" data-i="' + i + '"><span class="grip" aria-label="つまんで動かす">≡</span><span class="n">' + n + '</span><span class="name">' + esc(x.name) + '</span>' +
       '<button onclick="moveOrder(' + i + ',-1)" ' + (sameUp ? '' : 'disabled style="opacity:.3"') + '>↑</button>' +
       '<button onclick="moveOrder(' + i + ',1)" ' + (sameDown ? '' : 'disabled style="opacity:.3"') + '>↓</button></div>';
   });
   document.getElementById('orderList').innerHTML = h;
 }
+/** 「≡」をつまんで上下に動かすと、同じ区分の中で並べかえる */
+(function () {
+  let from = null;
+  const list = () => document.getElementById('orderList');
+  const rowAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest('.orow[data-i]'); };
+  document.addEventListener('pointerdown', e => {
+    const g = e.target.closest && e.target.closest('#orderList .grip');
+    if (!g) return;
+    e.preventDefault();
+    from = Number(g.closest('.orow').dataset.i);
+    g.closest('.orow').classList.add('drag');
+    list().setPointerCapture(e.pointerId);
+  });
+  document.addEventListener('pointermove', e => {
+    if (from === null) return;
+    const r = rowAt(e);
+    if (!r) return;
+    const to = Number(r.dataset.i);
+    if (to === from) return;
+    const a = staffList.find(y => y.id === ORD[from]), b = staffList.find(y => y.id === ORD[to]);
+    if (a.kind !== b.kind) return; // 区分をまたいでは動かせない
+    const id = ORD.splice(from, 1)[0];
+    ORD.splice(to, 0, id);
+    from = to;
+    renderOrder();
+    const now = list().querySelector('.orow[data-i="' + to + '"]');
+    if (now) now.classList.add('drag');
+  });
+  const end = () => { if (from === null) return; from = null; renderOrder(); };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
+})();
 function moveOrder(i, d) {
   const j = i + d;
   if (j < 0 || j >= ORD.length) return;
@@ -1378,8 +1456,7 @@ function savePersonTime(reset) {
 
 function selectedNicks() { return Array.prototype.map.call(document.querySelectorAll('#edPeople .person.sel'), b => b.dataset.nick); }
 function updateSave() { document.getElementById('edSave').textContent = '保存（' + selectedNicks().length + '人）'; }
-function renderNeed() { document.getElementById('edNeed').textContent = edit.need ? edit.need + '人' : '未設定'; }
-function stepNeed(n) { edit.need = Math.max(0, (edit.need || 0) + n); renderNeed(); }
+function renderNeed() { fillNeed('edNeedSel', edit.need); }
 function clearTime() { document.getElementById('edStart').value = ''; document.getElementById('edEnd').value = ''; }
 
 function save() {
@@ -1454,6 +1531,40 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
+
+dragSelect('adCal', k => !!A.picked[k], (k, on) => { if (on) A.picked[k] = true; else delete A.picked[k]; }, () => true, renderAdCal);
+dragSelect('bkCal', k => !!bk.picked[k], (k, on) => { if (on) bk.picked[k] = true; else delete bk.picked[k]; }, k => bulkDone(k), renderBulk);
+
+// ---------- キーボードが出ても、入力欄が隠れないように ----------
+(function () {
+  const vv = window.visualViewport;
+  const fit = () => {
+    if (!vv) return;
+    document.documentElement.style.setProperty('--vvh', vv.height + 'px');
+    document.documentElement.style.setProperty('--vvt', vv.offsetTop + 'px');
+  };
+  if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit(); }
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (!el.matches || !el.matches('input, textarea, select')) return;
+    setTimeout(() => { fit(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 350);
+  });
+})();
+
+// ---------- 時間の入力：くるくるは 0:00 から。何も選ばずに閉じたら空のまま ----------
+(function () {
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (el.type !== 'time' || el.value) return;
+    el.value = '00:00';
+    el.dataset.auto = '1';
+  });
+  document.addEventListener('change', e => { if (e.target.type === 'time') delete e.target.dataset.auto; }, true);
+  document.addEventListener('focusout', e => {
+    const el = e.target;
+    if (el.type === 'time' && el.dataset.auto) { el.value = ''; delete el.dataset.auto; } // 選ばずに閉じた
+  });
+})();
 
 if (FIRST) {
   data = setMonth(FIRST);
