@@ -278,6 +278,7 @@
       <h3>応援メモ（社長・社員だけに表示）</h3>
       <input class="memo" id="edMemo" placeholder="例：ESRR 1人">
     </div>
+    <button class="link" id="edBulkDel" onclick="closeSheet('editor');openBulk(edit.site, day)" style="margin:0 4px 12px">🗓 この現場の枠を、ほかの日もカレンダーで選んでまとめて消す</button>
     </div>
     <h3 style="font-size:15px;color:var(--sub);margin:4px 2px 8px" id="edPeopleTitle">人をタップして選ぶ</h3>
     <div id="edPeople"></div>
@@ -935,6 +936,7 @@ function showEditor(f) {
   document.getElementById('edGuardPayBox').style.display = siteOf(f.site).guard ? '' : 'none'; // 身辺の現場だけ
   document.getElementById('edGuardPay').checked = !!f.guardPay;
   document.getElementById('edDel').style.display = f.id ? '' : 'none';
+  document.getElementById('edBulkDel').style.display = f.id ? '' : 'none';
   document.getElementById('edReadonly').style.display = data.canEdit ? 'none' : '';
   document.getElementById('edEdit').style.display = data.canEdit ? '' : 'none';
   document.getElementById('edFoot').style.display = data.canEdit ? '' : 'none';
@@ -1044,8 +1046,9 @@ function notifiedText(r) { return r.notified && r.notified.length ? '\n' + r.not
 
 // ---------- 枠をまとめて消す（現場の管理から） ----------
 let bk = null;
-function openBulk(code) {
+function openBulk(code, preKey) {
   bk = { site: code, ym: day.slice(0, 7), picked: {} };
+  if (preKey) bk.picked[preKey] = true; // シフトの画面から開いたときは、その日を選んだ状態で
   document.getElementById('bkTitle').textContent = code + ' の枠を消す';
   ensureMonth(bk.ym, renderBulk);
   openSheet('bulk');
